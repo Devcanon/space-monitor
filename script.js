@@ -47,17 +47,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const sortedProjects = Object.entries(projectOnline).sort(([, a], [, b]) => b - a);
-            
+
             renderServerList(sortedProjects, previousOnlineState);
-            
+
             previousOnlineState = { ...projectOnline };
 
         } catch (error) {
             console.warn("Не удалось обновить данные. Будет предпринята новая попытка при следующем цикле.", error);
         }
     }
-
-
 
     function renderServerList(sortedProjects, oldState) {
         const fragment = document.createDocumentFragment();
@@ -66,28 +64,36 @@ document.addEventListener('DOMContentLoaded', () => {
             const entryDiv = document.createElement('div');
             entryDiv.className = 'server-entry';
 
-
             entryDiv.innerHTML = `
-                <span class="server-name">${projectName}</span>
+                <div class="server-name-container">
+                    <span class="change-indicator"></span> 
+                    <span class="server-name-text">${projectName}</span>
+                </div>
                 <span class="player-count">${currentOnline} <i class="fa-solid fa-user"></i></span>
             `;
 
             const countSpan = entryDiv.querySelector('.player-count');
+            const indicatorSpan = entryDiv.querySelector('.change-indicator');
 
             const rank = index + 1;
             if (rank <= 3) countSpan.classList.add('top');
             else if (rank <= 6) countSpan.classList.add('mid');
             else if (rank <= 9) countSpan.classList.add('low');
-            
+
             const previousOnline = oldState[projectName];
             if (typeof previousOnline !== 'undefined') {
                 if (currentOnline > previousOnline) {
                     entryDiv.classList.add('flash-up');
+                    indicatorSpan.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
+                    indicatorSpan.classList.add('arrow-up');
+
                 } else if (currentOnline < previousOnline) {
                     entryDiv.classList.add('flash-down');
+                    indicatorSpan.innerHTML = '<i class="fa-solid fa-arrow-down"></i>';
+                    indicatorSpan.classList.add('arrow-down');
                 }
             }
-            
+
             fragment.appendChild(entryDiv);
         });
 
