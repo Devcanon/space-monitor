@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error("Критическая ошибка при загрузке или обработке данных:", error);
-            serversListContainer.innerHTML = `<p class="error-text">Ошибка! Откройте консоль (F12) для деталей.</p>`;
+            serversListContainer.innerHTML = `<p class="error-text">Опачки! Попробуйте перезагрузить страницу.</p>`;
         }
     }
 
@@ -96,3 +96,4 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchAndDisplayServers();
     setInterval(fetchAndDisplayServers, 60000);
 });
+
