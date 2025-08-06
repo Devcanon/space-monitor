@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
+
     function renderServerList(sortedProjects, oldState) {
         const fragment = document.createDocumentFragment();
 
