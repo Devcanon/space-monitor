@@ -57,22 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function getPlayerNoun(number) {
-        let n = Math.abs(number);
-        n %= 100;
-        if (n >= 5 && n <= 20) {
-            return 'игроков';
-        }
-        n %= 10;
-        if (n === 1) {
-            return 'игрок';
-        }
-        if (n >= 2 && n <= 4) {
-            return 'игрока';
-        }
-        return 'игроков';
-    }
-
     function renderServerList(sortedProjects, oldState) {
         const fragment = document.createDocumentFragment();
 
@@ -80,11 +64,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const entryDiv = document.createElement('div');
             entryDiv.className = 'server-entry';
 
-            const playerCountText = `${currentOnline} ${getPlayerNoun(currentOnline)}`;
-
             entryDiv.innerHTML = `
                 <span class="server-name">${projectName}</span>
-                <span class="player-count">${playerCountText}</span>
+                <span class="player-count">${currentOnline} <i class="fa-solid fa-user"></i></span>
             `;
 
             const countSpan = entryDiv.querySelector('.player-count');
