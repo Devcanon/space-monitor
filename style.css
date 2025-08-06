@@ -1,3 +1,7 @@
+:root {
+    --animation-duration: 3s;
+}
+
 body {
     background-color: #1a1a1a;
     color: #f0f0f0;
@@ -48,31 +52,71 @@ h1 {
 }
 
 .flash-up {
-    animation: flash-light 1s ease-out;
+    animation: flash-light var(--animation-duration) ease-out;
 }
 
 .flash-down {
-    animation: flash-dark 1s ease-out;
+    animation: flash-dark var(--animation-duration) ease-out;
 }
 
 @keyframes flash-light {
-    from { background-color: rgba(255, 255, 255, 0.2); }
-    to { background-color: transparent; }
+    from {
+        background-color: rgba(0, 27, 0, 0.3);
+    }
+
+    to {
+        background-color: transparent;
+    }
 }
 
 @keyframes flash-dark {
-    from { background-color: rgba(0, 0, 0, 0.3); }
-    to { background-color: transparent; }
+    from {
+        background-color: rgba(19, 0, 0, 0.3);
+    }
+
+    to {
+        background-color: transparent;
+    }
 }
 
+.server-name-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
-.server-name {
+.change-indicator {
+    width: 14px;
+    text-align: center;
+    font-size: 0.9em;
+    animation: fade-out var(--animation-duration) forwards;
+}
+
+.arrow-up {
+    color: #4CAF50;
+}
+
+.arrow-down {
+    color: #e74c3c;
+}
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+.server-name-text {
     font-weight: 700;
 }
 
 .player-count {
     color: white;
-    padding: 5px 12px; 
+    padding: 5px 12px;
     border-radius: 5px;
     font-weight: 700;
     font-size: 0.9em;
@@ -80,17 +124,23 @@ h1 {
     text-align: center;
     transition: background-color 0.3s ease;
     background-color: #555;
-    
-
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px; 
+    gap: 6px;
 }
 
-.player-count.top { background-color: #4CAF50; }
-.player-count.mid { background-color: #f39c12; }
-.player-count.low { background-color: #e74c3c; }
+.player-count.top {
+    background-color: #4CAF50;
+}
+
+.player-count.mid {
+    background-color: #f39c12;
+}
+
+.player-count.low {
+    background-color: #e74c3c;
+}
 
 
 .footer {
