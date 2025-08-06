@@ -20,9 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchAndDisplayServers() {
         try {
             const response = await fetch(API_URL);
-            if (!response.ok) throw new Error(`Ошибка сети или прокси: ${response.status}`);
-            const responseText = await response.text();
-            const allServers = JSON.parse(responseText);
+            if (!response.ok) {
+                throw new Error(`Сетевая ошибка: ${response.status}`);
+            }
+            const allServers = await response.json();
 
             const projectOnline = {};
             for (const projectName in SERVER_GROUPS) {
@@ -32,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const server of allServers) {
                 if (server && server.statusData) {
                     const status = server.statusData;
-
                     if (status.name && typeof status.players === 'number') {
                         const serverNameLower = status.name.toLowerCase();
                         const playerCount = status.players;
@@ -53,9 +53,24 @@ document.addEventListener('DOMContentLoaded', () => {
             previousOnlineState = { ...projectOnline };
 
         } catch (error) {
-            console.error("Критическая ошибка при загрузке или обработке данных:", error);
-            serversListContainer.innerHTML = `<p class="error-text">Опачки! Попробуйте перезагрузить страницу.</p>`;
+            console.warn("Не удалось обновить данные. Будет предпринята новая попытка при следующем цикле.", error);
         }
+    }
+
+    function getPlayerNoun(number) {
+        let n = Math.abs(number);
+        n %= 100;
+        if (n >= 5 && n <= 20) {
+            return 'игроков';
+        }
+        n %= 10;
+        if (n === 1) {
+            return 'игрок';
+        }
+        if (n >= 2 && n <= 4) {
+            return 'игрока';
+        }
+        return 'игроков';
     }
 
     function renderServerList(sortedProjects, oldState) {
@@ -65,9 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const entryDiv = document.createElement('div');
             entryDiv.className = 'server-entry';
 
+            const playerCountText = `${currentOnline} ${getPlayerNoun(currentOnline)}`;
+
             entryDiv.innerHTML = `
                 <span class="server-name">${projectName}</span>
-                <span class="player-count">${currentOnline} игроков</span>
+                <span class="player-count">${playerCountText}</span>
             `;
 
             const countSpan = entryDiv.querySelector('.player-count');
@@ -96,5 +113,3 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchAndDisplayServers();
     setInterval(fetchAndDisplayServers, 2000);
 });
-
-
