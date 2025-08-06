@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const server of allServers) {
                 if (server && server.statusData) {
                     const status = server.statusData;
+
                     if (status.name && typeof status.players === 'number') {
                         const serverNameLower = status.name.toLowerCase();
                         const playerCount = status.players;
@@ -46,9 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const sortedProjects = Object.entries(projectOnline).sort(([, a], [, b]) => b - a);
-
+            
             renderServerList(sortedProjects, previousOnlineState);
-
+            
             previousOnlineState = { ...projectOnline };
 
         } catch (error) {
@@ -75,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (rank <= 3) countSpan.classList.add('top');
             else if (rank <= 6) countSpan.classList.add('mid');
             else if (rank <= 9) countSpan.classList.add('low');
-
+            
             const previousOnline = oldState[projectName];
             if (typeof previousOnline !== 'undefined') {
                 if (currentOnline > previousOnline) {
@@ -84,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     entryDiv.classList.add('flash-down');
                 }
             }
-
+            
             fragment.appendChild(entryDiv);
         });
 
@@ -93,6 +94,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     fetchAndDisplayServers();
-    setInterval(fetchAndDisplayServers, 2000
-    );
+    setInterval(fetchAndDisplayServers, 60000);
 });
