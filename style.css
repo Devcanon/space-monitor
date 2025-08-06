@@ -72,20 +72,20 @@ h1 {
 
 .player-count {
     color: white;
-    padding: 5px 12px; /* Немного увеличим отступы по бокам */
+    padding: 5px 12px; 
     border-radius: 5px;
     font-weight: 700;
     font-size: 0.9em;
-    min-width: 80px; /* Можно немного уменьшить */
+    min-width: 80px;
     text-align: center;
     transition: background-color 0.3s ease;
     background-color: #555;
     
-    /* --- ИЗМЕНЕНИЯ ЗДЕСЬ: Для выравнивания числа и иконки --- */
+
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px; /* Расстояние между числом и иконкой */
+    gap: 6px; 
 }
 
 .player-count.top { background-color: #4CAF50; }
