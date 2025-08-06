@@ -1,0 +1,114 @@
+body {
+    background-color: #1a1a1a;
+    color: #f0f0f0;
+    font-family: 'Roboto', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    padding: 40px 20px;
+    box-sizing: border-box;
+}
+
+.monitor-container {
+    background-color: #2c2c2c;
+    border-radius: 10px;
+    padding: 20px 30px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    border: 1px solid #444;
+}
+
+h1 {
+    text-align: center;
+    color: #ffffff;
+    margin-top: 0;
+    border-bottom: 1px solid #444;
+    padding-bottom: 15px;
+}
+
+#servers-list {
+    margin-top: 20px;
+}
+
+.server-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 10px;
+    font-size: 1.2em;
+    border-bottom: 1px solid #3a3a3a;
+    border-radius: 5px;
+}
+
+.server-entry:last-child {
+    border-bottom: none;
+}
+
+.flash-up {
+    animation: flash-green 1s ease-out;
+}
+
+.flash-down {
+    animation: flash-red 1s ease-out;
+}
+
+@keyframes flash-green {
+    from {
+        background-color: rgba(76, 175, 80, 0.6);
+    }
+
+    to {
+        background-color: transparent;
+    }
+
+}
+
+@keyframes flash-red {
+    from {
+        background-color: rgba(231, 76, 60, 0.6);
+    }
+
+    to {
+        background-color: transparent;
+    }
+}
+
+
+.server-name {
+    font-weight: 700;
+}
+
+.player-count {
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: 700;
+    font-size: 0.9em;
+    min-width: 90px;
+    text-align: center;
+    transition: background-color 0.3s ease;
+    background-color: #555;
+}
+
+.player-count.top {
+    background-color: #4CAF50;
+}
+
+.player-count.mid {
+    background-color: #f39c12;
+}
+
+.player-count.low {
+    background-color: #e74c3c;
+}
+
+
+.footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9em;
+    color: #777;
+}
