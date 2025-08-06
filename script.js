@@ -57,12 +57,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+
     function renderServerList(sortedProjects, oldState) {
         const fragment = document.createDocumentFragment();
 
         sortedProjects.forEach(([projectName, currentOnline], index) => {
             const entryDiv = document.createElement('div');
             entryDiv.className = 'server-entry';
+
 
             entryDiv.innerHTML = `
                 <span class="server-name">${projectName}</span>
