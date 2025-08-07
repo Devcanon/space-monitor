@@ -102,5 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     fetchAndDisplayServers();
-    setInterval(fetchAndDisplayServers, 2000);
+    setInterval(fetchAndDisplayServers, 4000);
 });
+
