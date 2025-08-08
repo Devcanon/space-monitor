@@ -31,7 +31,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const entryDiv = document.createElement('div');
             entryDiv.className = 'server-entry';
             entryDiv.dataset.projectName = projectName;
-            entryDiv.innerHTML = `<div class="server-name-container"><span class="server-name-text">${projectName}</span></div><div class="player-count-wrapper"><div class="player-count">${currentOnline} <i class="fa-solid fa-user"></i></div></div>`;
+
+            const iconHtml = currentOnline === 0
+                ? '☠'
+                : '<i class="fa-solid fa-user"></i>'; 
+
+            entryDiv.innerHTML = `<div class="server-name-container"><span class="server-name-text">${projectName}</span></div><div class="player-count-wrapper"><div class="player-count">${currentOnline} ${iconHtml}</div></div>`;
+
             const wrapper = entryDiv.querySelector('.player-count-wrapper');
             const previousOnline = oldState[projectName];
             if (typeof previousOnline !== 'undefined') {
@@ -62,7 +68,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const entryDiv = document.createElement('div');
             entryDiv.className = 'server-entry';
             entryDiv.style.cursor = 'default';
-            entryDiv.innerHTML = `<div class="server-name-container"><span class="server-name-text">${server.name}</span></div><div class="player-count-wrapper"><div class="player-count">${currentOnline} <i class="fa-solid fa-user"></i></div></div>`;
+
+            const iconHtml = currentOnline === 0
+                ? '☠' 
+                : '<i class="fa-solid fa-user"></i>'; 
+
+            entryDiv.innerHTML = `<div class="server-name-container"><span class="server-name-text">${server.name}</span></div><div class="player-count-wrapper"><div class="player-count">${currentOnline} ${iconHtml}</div></div>`;
+
             const wrapper = entryDiv.querySelector('.player-count-wrapper');
             const previousOnline = previousServerState[server.name];
             if (typeof previousOnline !== 'undefined') {
@@ -111,5 +123,5 @@ document.addEventListener('DOMContentLoaded', () => {
     detailsOverlay.addEventListener('click', hideDetailsPanel);
 
     fetchData();
-    setInterval(fetchData, 2000);
+    setInterval(fetchData, 3000);
 });
