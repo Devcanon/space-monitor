@@ -123,6 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     detailsOverlay.addEventListener('click', hideDetailsPanel);
 
     fetchData();
-    setInterval(fetchData, 8000);
+    setInterval(fetchData, 5000);
 });
+
 
