@@ -10,32 +10,128 @@ document.addEventListener('DOMContentLoaded', () => {
   const detailsServerList = document.getElementById('details-server-list');
   const closePanelBtn = document.getElementById('close-panel-btn');
 
+  const toggleEighteenPlusBtn = document.getElementById('toggle-18-plus-btn');
+
   let previousProjectState = {};
   let previousServerState = {};
   let groupedServers = {};
   let currentlyOpenProject = null;
+  let showEighteenPlusServers = false;
 
   const SERVER_GROUPS = {
-    'Корвакс': ['Corvax'], 'Санрайз': ['РЫБЬЯ', 'LUST', 'SUNRISE', 'FIRE', 'PRIME'],
-    'Империал': ['Imperial'], 'Спейс Сторис': ['Stories'], 'Мёртвый Космос': ['МЁРТВЫЙ'],
-    'Губы': ['Goob'], 'Визарды': ["Wizard's"], 'СС220': ['SS220'],
+    'Корвакс': ['Corvax'],
+    'Санрайз': ['РЫБЬЯ', 'LUST', 'SUNRISE', 'FIRE', 'PRIME'],
+    'Империал': ['Imperial'],
+    'Спейс Сторис': ['Stories'],
+    'Мёртвый Космос': ['МЁРТВЫЙ'],
+    'Губы': ['Goob'],
+    'Визарды': ["Wizard's"],
+    'СС220': ['SS220'],
     'Время Приключений': ['Время']
   };
 
-  async function fetchData() { try { const response = await fetch(API_URL); if (!response.ok) throw new Error(`Сетевая ошибка: ${response.status}`); const allServers = await response.json(); processData(allServers); } catch (error) { console.warn("Не удалось обновить данные.", error); } }
-  function processData(allServers) { const currentProjectState = {}; const currentServerState = {}; groupedServers = {}; for (const projectName in SERVER_GROUPS) { groupedServers[projectName] = []; currentProjectState[projectName] = 0; } for (const server of allServers) { if (server && server.statusData && server.statusData.name && typeof server.statusData.players === 'number') { const status = server.statusData; currentServerState[status.name] = status.players; const serverNameLower = status.name.toLowerCase(); for (const [projectName, keywords] of Object.entries(SERVER_GROUPS)) { if (keywords.some(keyword => serverNameLower.includes(keyword.toLowerCase()))) { groupedServers[projectName].push(status); currentProjectState[projectName] += status.players; break; } } } } const sortedProjects = Object.entries(currentProjectState).sort(([, a], [, b]) => b - a); renderProjectList(sortedProjects, previousProjectState); if (currentlyOpenProject) { renderDetailsPanel(currentlyOpenProject); } previousProjectState = { ...currentProjectState }; previousServerState = { ...currentServerState }; }
-  function createGhost(wrapper, type, sign) { const ghostEl = document.createElement('div'); ghostEl.className = `player-count-ghost ${type}`; ghostEl.innerHTML = `${sign} <i class="fa-solid fa-user"></i>`; wrapper.appendChild(ghostEl); const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000; setTimeout(() => { if (ghostEl.parentNode === wrapper) { wrapper.removeChild(ghostEl); } }, animationDuration); }
+  async function fetchData() {
+    try {
+      const response = await fetch(API_URL);
+      if (!response.ok) throw new Error(`Сетевая ошибка: ${response.status}`);
+      const allServers = await response.json();
+      processData(allServers);
+    } catch (error) {
+      console.warn("Не удалось обновить данные.", error);
+      serversListContainer.innerHTML = '<p class="loading-text">Не удалось загрузить данные. Попробуйте обновить страницу.</p>';
+    }
+  }
+
+  function processData(allServers) {
+    let filteredServers = allServers;
+
+    // Фильтруем сервера, если 18+ сервера должны быть скрыты
+    if (!showEighteenPlusServers) {
+      filteredServers = allServers.filter(server => {
+        if (!server || !server.statusData) return true;
+
+        const tags = server.statusData.tags || [];
+        const name = server.statusData.name || '';
+
+        const isEighteenPlus = tags.includes('18+') || name.toLowerCase().includes('18+');
+
+        return !isEighteenPlus;
+      });
+    }
+
+    const currentProjectState = {};
+    const currentServerState = {};
+    groupedServers = {}; 
+
+    for (const projectName in SERVER_GROUPS) {
+      groupedServers[projectName] = [];
+      currentProjectState[projectName] = 0;
+    }
+
+    for (const server of filteredServers) {
+      if (server && server.statusData && server.statusData.name && typeof server.statusData.players === 'number') {
+        const status = server.statusData;
+        currentServerState[status.name] = status.players;
+
+        const serverNameLower = status.name.toLowerCase();
+        let foundProject = false;
+        for (const [projectName, keywords] of Object.entries(SERVER_GROUPS)) {
+          if (keywords.some(keyword => serverNameLower.includes(keyword.toLowerCase()))) {
+            groupedServers[projectName].push(status);
+            currentProjectState[projectName] += status.players;
+            foundProject = true;
+            break;
+          }
+        }
+      }
+    }
+
+    const sortedProjects = Object.entries(currentProjectState).sort(([, a], [, b]) => b - a);
+    renderProjectList(sortedProjects, previousProjectState);
+
+    if (currentlyOpenProject) {
+      if (currentProjectState[currentlyOpenProject] === 0 || !groupedServers[currentlyOpenProject] || groupedServers[currentlyOpenProject].length === 0) {
+        hideDetailsPanel();
+      } else {
+        renderDetailsPanel(currentlyOpenProject);
+      }
+    }
+
+    previousProjectState = {
+      ...currentProjectState
+    };
+    previousServerState = {
+      ...currentServerState
+    };
+  }
+
+  function createGhost(wrapper, type, sign) {
+    const ghostEl = document.createElement('div');
+    ghostEl.className = `player-count-ghost ${type}`;
+    ghostEl.innerHTML = `${sign} <i class="fa-solid fa-user"></i>`;
+    wrapper.appendChild(ghostEl);
+    const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
+    setTimeout(() => {
+      if (ghostEl.parentNode === wrapper) {
+        wrapper.removeChild(ghostEl);
+      }
+    }, animationDuration);
+  }
 
   function renderProjectList(sortedProjects, oldState) {
     const fragment = document.createDocumentFragment();
+    if (sortedProjects.length === 0) {
+      serversListContainer.innerHTML = '<p class="loading-text">Нет доступных проектов.</p>';
+      return;
+    }
     sortedProjects.forEach(([projectName, currentOnline]) => {
       const entryDiv = document.createElement('div');
       entryDiv.className = 'server-entry';
       entryDiv.dataset.projectName = projectName;
 
-      const iconHtml = currentOnline === 0
-        ? '☠'
-        : '<i class="fa-solid fa-user"></i>';
+      const iconHtml = currentOnline === 0 ?
+        '☠' :
+        '<i class="fa-solid fa-user"></i>';
 
       entryDiv.innerHTML = `<div class="server-name-container"><span class="server-name-text">${projectName}</span></div><div class="player-count-wrapper"><div class="player-count">${currentOnline} ${iconHtml}</div></div>`;
 
@@ -57,11 +153,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderDetailsPanel(projectName) {
-    const servers = groupedServers[projectName].sort((a, b) => b.players - a.players);
+    const servers = (groupedServers[projectName] || []).sort((a, b) => b.players - a.players);
     detailsServerList.innerHTML = '';
     panelTitle.textContent = projectName;
     if (servers.length === 0) {
-      detailsServerList.innerHTML = '<p class="loading-text">Нет активных серверов.</p>';
+      detailsServerList.innerHTML = '<p class="loading-text">Нет активных серверов в этом проекте, либо они отфильтрованы.</p>';
       return;
     }
     servers.forEach(server => {
@@ -70,9 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
       entryDiv.className = 'server-entry';
       entryDiv.style.cursor = 'default';
 
-      const iconHtml = currentOnline === 0
-        ? '☠'
-        : '<i class="fa-solid fa-user"></i>';
+      const iconHtml = currentOnline === 0 ?
+        '☠' :
+        '<i class="fa-solid fa-user"></i>';
 
       entryDiv.innerHTML = `<div class="server-name-container"><span class="server-name-text">${server.name}</span></div><div class="player-count-wrapper"><div class="player-count">${currentOnline} ${iconHtml}</div></div>`;
 
@@ -109,6 +205,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (serverEntry && serverEntry.dataset.projectName) {
       const newProjectName = serverEntry.dataset.projectName;
 
+      if (!groupedServers[newProjectName] || groupedServers[newProjectName].length === 0) {
+        return;
+      }
+
       if (detailsPanel.classList.contains('is-open')) {
         if (currentlyOpenProject !== newProjectName) {
           currentlyOpenProject = newProjectName;
@@ -122,6 +222,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   closePanelBtn.addEventListener('click', hideDetailsPanel);
   detailsOverlay.addEventListener('click', hideDetailsPanel);
+
+  toggleEighteenPlusBtn.addEventListener('click', () => {
+    showEighteenPlusServers = !showEighteenPlusServers; 
+    toggleEighteenPlusBtn.textContent = showEighteenPlusServers ? 'Скрыть 18+ сервера' : 'Показать 18+ сервера';
+    fetchData();
+  });
+
 
   function updateClock() {
     const now = new Date();
