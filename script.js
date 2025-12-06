@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
 
   const API_URL = 'https://hub.spacestation14.com/api/servers';
+  const MINECRAFT_API_URL = 'https://api.mcstatus.io/v2/status/java/148.253.211.21:25565';
+  
   const serversListContainer = document.getElementById('servers-list');
   const currentTimeElement = document.getElementById('current-time');
 
@@ -17,6 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let groupedServers = {};
   let currentlyOpenProject = null;
   let showEighteenPlusServers = false;
+  
+  // Хранилище для данных Minecraft сервера
+  let minecraftServerData = null;
 
   const SERVER_GROUPS = {
     'Корвакс': ['Corvax'],
@@ -30,22 +35,43 @@ document.addEventListener('DOMContentLoaded', () => {
     'Время Приключений': ['Время']
   };
 
+  // Функция получения статуса Minecraft сервера
+  async function fetchMinecraftStatus() {
+    try {
+      const response = await fetch(MINECRAFT_API_URL);
+      if (!response.ok) throw new Error(`Ошибка: ${response.status}`);
+      minecraftServerData = await response.json();
+    } catch (error) {
+      console.warn("Не удалось получить данные Minecraft сервера.", error);
+      minecraftServerData = null;
+    }
+  }
+
   async function fetchData() {
     try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error(`Сетевая ошибка: ${response.status}`);
-      const allServers = await response.json();
-      processData(allServers);
+      // Запрашиваем оба API параллельно
+      await Promise.all([
+        fetch(API_URL).then(res => {
+          if (!res.ok) throw new Error(`Сетевая ошибка: ${res.status}`);
+          return res.json();
+        }).then(data => processData(data)),
+        fetchMinecraftStatus()
+      ]);
+      
+      // После получения данных перерисовываем список с учётом Minecraft
+      renderFinalList();
+      
     } catch (error) {
       console.warn("Не удалось обновить данные.", error);
       serversListContainer.innerHTML = '<p class="loading-text">Не удалось загрузить данные. Попробуйте обновить страницу.</p>';
     }
   }
 
+  let processedProjectState = {};
+
   function processData(allServers) {
     let filteredServers = allServers;
 
-    // Фильтруем сервера, если 18+ сервера должны быть скрыты
     if (!showEighteenPlusServers) {
       filteredServers = allServers.filter(server => {
         if (!server || !server.statusData) return true;
@@ -86,6 +112,36 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    processedProjectState = currentProjectState;
+    previousServerState = { ...currentServerState };
+  }
+
+  function renderFinalList() {
+    const currentProjectState = { ...processedProjectState };
+    
+    // Добавляем Minecraft сервер в группу Корвакс
+    if (minecraftServerData && minecraftServerData.online) {
+      const mcPlayers = minecraftServerData.players.online;
+      currentProjectState['Корвакс'] = (currentProjectState['Корвакс'] || 0) + mcPlayers;
+      
+      // Добавляем в groupedServers для отображения в панели деталей
+      if (!groupedServers['Корвакс']) {
+        groupedServers['Корвакс'] = [];
+      }
+      
+      // Удаляем старую запись Minecraft сервера если есть
+      groupedServers['Корвакс'] = groupedServers['Корвакс'].filter(s => s.name !== 'Corvax Craft');
+      
+      // Добавляем актуальные данные Minecraft сервера
+      groupedServers['Корвакс'].push({
+        name: 'Corvax Craft',
+        players: mcPlayers,
+        isMinecraft: true
+      });
+      
+      previousServerState['Corvax Craft'] = mcPlayers;
+    }
+
     const sortedProjects = Object.entries(currentProjectState).sort(([, a], [, b]) => b - a);
     renderProjectList(sortedProjects, previousProjectState);
 
@@ -97,12 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    previousProjectState = {
-      ...currentProjectState
-    };
-    previousServerState = {
-      ...currentServerState
-    };
+    previousProjectState = { ...currentProjectState };
   }
 
   function createGhost(wrapper, type, sign) {
@@ -164,13 +215,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentOnline = server.players;
       const entryDiv = document.createElement('div');
       entryDiv.className = 'server-entry';
+      if (server.isMinecraft) {
+        entryDiv.classList.add('minecraft-server');
+      }
       entryDiv.style.cursor = 'default';
 
       const iconHtml = currentOnline === 0 ?
         '☠' :
         '<i class="fa-solid fa-user"></i>';
 
-      entryDiv.innerHTML = `<div class="server-name-container"><span class="server-name-text">${server.name}</span></div><div class="player-count-wrapper"><div class="player-count">${currentOnline} ${iconHtml}</div></div>`;
+      // Добавляем иконку Minecraft для соответствующего сервера
+      const namePrefix = server.isMinecraft ? '<i class="fa-solid fa-cube" style="color: #8B4513; margin-right: 8px;"></i>' : '';
+
+      entryDiv.innerHTML = `<div class="server-name-container">${namePrefix}<span class="server-name-text">${server.name}</span></div><div class="player-count-wrapper"><div class="player-count">${currentOnline} ${iconHtml}</div></div>`;
 
       const wrapper = entryDiv.querySelector('.player-count-wrapper');
       const previousOnline = previousServerState[server.name];
