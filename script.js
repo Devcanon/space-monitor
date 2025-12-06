@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentlyOpenProject = null;
   let showEighteenPlusServers = false;
   
-  // Хранилище для данных Minecraft сервера
   let minecraftServerData = null;
 
   const SERVER_GROUPS = {
@@ -35,7 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
     'Время Приключений': ['Время']
   };
 
-  // Функция получения статуса Minecraft сервера
   async function fetchMinecraftStatus() {
     try {
       const response = await fetch(MINECRAFT_API_URL);
@@ -49,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function fetchData() {
     try {
-      // Запрашиваем оба API параллельно
       await Promise.all([
         fetch(API_URL).then(res => {
           if (!res.ok) throw new Error(`Сетевая ошибка: ${res.status}`);
@@ -58,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchMinecraftStatus()
       ]);
       
-      // После получения данных перерисовываем список с учётом Minecraft
       renderFinalList();
       
     } catch (error) {
@@ -119,20 +115,16 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderFinalList() {
     const currentProjectState = { ...processedProjectState };
     
-    // Добавляем Minecraft сервер в группу Корвакс
     if (minecraftServerData && minecraftServerData.online) {
       const mcPlayers = minecraftServerData.players.online;
       currentProjectState['Корвакс'] = (currentProjectState['Корвакс'] || 0) + mcPlayers;
       
-      // Добавляем в groupedServers для отображения в панели деталей
       if (!groupedServers['Корвакс']) {
         groupedServers['Корвакс'] = [];
       }
       
-      // Удаляем старую запись Minecraft сервера если есть
       groupedServers['Корвакс'] = groupedServers['Корвакс'].filter(s => s.name !== 'Corvax Craft');
       
-      // Добавляем актуальные данные Minecraft сервера
       groupedServers['Корвакс'].push({
         name: 'Corvax Craft',
         players: mcPlayers,
@@ -224,7 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
         '☠' :
         '<i class="fa-solid fa-user"></i>';
 
-      // Добавляем иконку Minecraft для соответствующего сервера
       const namePrefix = server.isMinecraft ? '<i class="fa-solid fa-cube" style="color: #8B4513; margin-right: 8px;"></i>' : '';
 
       entryDiv.innerHTML = `<div class="server-name-container">${namePrefix}<span class="server-name-text">${server.name}</span></div><div class="player-count-wrapper"><div class="player-count">${currentOnline} ${iconHtml}</div></div>`;
@@ -314,3 +305,4 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
 });
+
