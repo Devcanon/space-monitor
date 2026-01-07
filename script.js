@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
   const API_URL = 'https://hub.spacestation14.com/api/servers';
-  const MINECRAFT_API_URL = 'https://api.mcstatus.io/v2/status/java/148.253.211.21:25565';
+  const MINECRAFT_API_URL = 'https://api.mcstatus.io/v2/status/java/corvaxcraft.ru';
   
   const serversListContainer = document.getElementById('servers-list');
   const currentTimeElement = document.getElementById('current-time');
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const SERVER_GROUPS = {
     'Корвакс': ['Corvax'],
     'Санрайз': ['РЫБЬЯ', 'LUST', 'SUNRISE', 'FIRE', 'PRIME'],
-    'Империал': ['Imperial'],
+    'Империал': ['Imperial', 'Spellward'],
     'Спейс Сторис': ['Stories'],
     'Мёртвый Космос': ['МЁРТВЫЙ'],
     'Губы': ['Goob'],
@@ -305,4 +305,5 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
 });
+
 
