@@ -20,7 +20,6 @@
   box-sizing: border-box;
 }
 
-/* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 4px; }
@@ -42,7 +41,6 @@ body {
   max-width: fit-content;
 }
 
-/* ── Monitor container ── */
 .monitor-container {
   padding: 22px 26px;
   width: 500px;
@@ -54,7 +52,6 @@ body {
   flex-shrink: 0;
 }
 
-/* ── Header ── */
 .header-block {
   display: flex;
   align-items: center;
@@ -82,7 +79,6 @@ h1 {
   letter-spacing: 0.06em;
 }
 
-/* ── Server list ── */
 #servers-list {
   margin-top: 6px;
 }
@@ -93,7 +89,6 @@ h1 {
   padding: 24px 0;
 }
 
-/* ── Server entry ── */
 .server-entry {
   display: flex;
   justify-content: space-between;
@@ -126,7 +121,6 @@ h1 {
   border-left-color: #666;
 }
 
-/* ── Rank badge ── */
 .rank-badge {
   display: inline-flex;
   align-items: center;
@@ -162,7 +156,6 @@ h1 {
   font-size: 0.95em;
 }
 
-/* ── Player count badge ── */
 .player-count-wrapper {
   position: relative;
 }
@@ -189,16 +182,10 @@ h1 {
   border-color: rgba(59, 165, 93, 0.2);
 }
 
-/* ══════════════════════════════════════════
-   АНИМАЦИИ ИЗМЕНЕНИЯ ОНЛАЙНА
-   ══════════════════════════════════════════ */
-
-/* Фон строки при росте: зелёный всполох */
 .flash-up {
   animation: flash-green 1.4s ease-out;
 }
 
-/* Фон строки при убыли: красный всполох */
 .flash-down {
   animation: flash-red 1.4s ease-out;
 }
@@ -213,7 +200,6 @@ h1 {
   100% { background-color: transparent; }
 }
 
-/* ── Рост: мягкий pop + зелёный glow-пульс ── */
 .anim-increase {
   animation: count-increase var(--animation-duration) cubic-bezier(0.175, 0.885, 0.32, 1.35) both;
 }
@@ -237,7 +223,6 @@ h1 {
   }
 }
 
-/* ── Убыль: тряска + красное свечение ── */
 .anim-decrease {
   animation: count-decrease var(--animation-duration) ease both;
 }
@@ -253,7 +238,6 @@ h1 {
   100% { transform: translateX(0);    box-shadow: 0 0 0 0 rgba(237, 66, 69, 0); }
 }
 
-/* ── Details panel ── */
 .details-panel {
   width: 0;
   height: 600px;
@@ -338,7 +322,6 @@ h1 {
   flex-grow: 1;
 }
 
-/* ── Footer ── */
 .footer {
   text-align: center;
   margin-top: 14px;
@@ -350,7 +333,6 @@ h1 {
 
 .footer p { margin: 0; }
 
-/* ── Mobile ── */
 @media (max-width: 768px) {
 
   html, body {
@@ -444,3 +426,4 @@ h1 {
     display: none;
   }
 }
+
