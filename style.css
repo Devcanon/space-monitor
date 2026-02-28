@@ -68,7 +68,6 @@ h1 {
   letter-spacing: 0.04em;
 }
 
-/* ── Clock ── */
 .current-time {
   text-align: center;
   font-size: 1.45em;
@@ -174,7 +173,6 @@ h1 {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  /* плавное угасание box-shadow после анимации */
   transition: box-shadow 0.4s ease;
 }
 
@@ -426,4 +424,5 @@ h1 {
     display: none;
   }
 }
+
 
