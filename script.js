@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const API_URL = 'https://hub.spacestation14.com/api/servers';
   const MINECRAFT_API_URL = 'https://api.mcstatus.io/v2/status/java/corvaxcraft.ru';
-  
+
   const serversListContainer = document.getElementById('servers-list');
   const currentTimeElement = document.getElementById('current-time');
 
@@ -12,14 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const detailsServerList = document.getElementById('details-server-list');
   const closePanelBtn = document.getElementById('close-panel-btn');
 
-  const toggleEighteenPlusBtn = document.getElementById('toggle-18-plus-btn');
-
   let previousProjectState = {};
   let previousServerState = {};
   let groupedServers = {};
   let currentlyOpenProject = null;
-  let showEighteenPlusServers = false;
-  
   let minecraftServerData = null;
 
   const SERVER_GROUPS = {
@@ -54,9 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }).then(data => processData(data)),
         fetchMinecraftStatus()
       ]);
-      
       renderFinalList();
-      
     } catch (error) {
       console.warn("Не удалось обновить данные.", error);
       serversListContainer.innerHTML = '<p class="loading-text">Не удалось загрузить данные. Попробуйте обновить страницу.</p>';
@@ -66,42 +60,25 @@ document.addEventListener('DOMContentLoaded', () => {
   let processedProjectState = {};
 
   function processData(allServers) {
-    let filteredServers = allServers;
-
-    if (!showEighteenPlusServers) {
-      filteredServers = allServers.filter(server => {
-        if (!server || !server.statusData) return true;
-
-        const tags = server.statusData.tags || [];
-        const name = server.statusData.name || '';
-
-        const isEighteenPlus = tags.includes('18+') || name.toLowerCase().includes('18+');
-
-        return !isEighteenPlus;
-      });
-    }
-
     const currentProjectState = {};
     const currentServerState = {};
-    groupedServers = {}; 
+    groupedServers = {};
 
     for (const projectName in SERVER_GROUPS) {
       groupedServers[projectName] = [];
       currentProjectState[projectName] = 0;
     }
 
-    for (const server of filteredServers) {
+    for (const server of allServers) {
       if (server && server.statusData && server.statusData.name && typeof server.statusData.players === 'number') {
         const status = server.statusData;
         currentServerState[status.name] = status.players;
 
         const serverNameLower = status.name.toLowerCase();
-        let foundProject = false;
         for (const [projectName, keywords] of Object.entries(SERVER_GROUPS)) {
           if (keywords.some(keyword => serverNameLower.includes(keyword.toLowerCase()))) {
             groupedServers[projectName].push(status);
             currentProjectState[projectName] += status.players;
-            foundProject = true;
             break;
           }
         }
@@ -114,23 +91,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderFinalList() {
     const currentProjectState = { ...processedProjectState };
-    
+
     if (minecraftServerData && minecraftServerData.online) {
       const mcPlayers = minecraftServerData.players.online;
       currentProjectState['Корвакс'] = (currentProjectState['Корвакс'] || 0) + mcPlayers;
-      
-      if (!groupedServers['Корвакс']) {
-        groupedServers['Корвакс'] = [];
-      }
-      
+
+      if (!groupedServers['Корвакс']) groupedServers['Корвакс'] = [];
+
       groupedServers['Корвакс'] = groupedServers['Корвакс'].filter(s => s.name !== 'Corvax Craft');
-      
-      groupedServers['Корвакс'].push({
-        name: 'Corvax Craft',
-        players: mcPlayers,
-        isMinecraft: true
-      });
-      
+      groupedServers['Корвакс'].push({ name: 'Corvax Craft', players: mcPlayers, isMinecraft: true });
       previousServerState['Corvax Craft'] = mcPlayers;
     }
 
@@ -138,7 +107,11 @@ document.addEventListener('DOMContentLoaded', () => {
     renderProjectList(sortedProjects, previousProjectState);
 
     if (currentlyOpenProject) {
-      if (currentProjectState[currentlyOpenProject] === 0 || !groupedServers[currentlyOpenProject] || groupedServers[currentlyOpenProject].length === 0) {
+      if (
+        currentProjectState[currentlyOpenProject] === 0 ||
+        !groupedServers[currentlyOpenProject] ||
+        groupedServers[currentlyOpenProject].length === 0
+      ) {
         hideDetailsPanel();
       } else {
         renderDetailsPanel(currentlyOpenProject);
@@ -148,17 +121,19 @@ document.addEventListener('DOMContentLoaded', () => {
     previousProjectState = { ...currentProjectState };
   }
 
-  function createGhost(wrapper, type, sign) {
-    const ghostEl = document.createElement('div');
-    ghostEl.className = `player-count-ghost ${type}`;
-    ghostEl.innerHTML = `${sign} <i class="fa-solid fa-user"></i>`;
-    wrapper.appendChild(ghostEl);
-    const animationDuration = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000;
-    setTimeout(() => {
-      if (ghostEl.parentNode === wrapper) {
-        wrapper.removeChild(ghostEl);
-      }
-    }, animationDuration);
+  // Применяет анимацию к элементу .player-count
+  function applyCountAnimation(entryDiv, currentOnline, previousOnline) {
+    if (typeof previousOnline === 'undefined') return;
+    const countEl = entryDiv.querySelector('.player-count');
+    if (!countEl) return;
+
+    if (currentOnline > previousOnline) {
+      entryDiv.classList.add('flash-up');
+      countEl.classList.add('anim-increase');
+    } else if (currentOnline < previousOnline) {
+      entryDiv.classList.add('flash-down');
+      countEl.classList.add('anim-decrease');
+    }
   }
 
   function renderProjectList(sortedProjects, oldState) {
@@ -167,28 +142,30 @@ document.addEventListener('DOMContentLoaded', () => {
       serversListContainer.innerHTML = '<p class="loading-text">Нет доступных проектов.</p>';
       return;
     }
-    sortedProjects.forEach(([projectName, currentOnline]) => {
+    sortedProjects.forEach(([projectName, currentOnline], index) => {
       const entryDiv = document.createElement('div');
       entryDiv.className = 'server-entry';
       entryDiv.dataset.projectName = projectName;
 
-      const iconHtml = currentOnline === 0 ?
-        '☠' :
-        '<i class="fa-solid fa-user"></i>';
+      if (currentOnline === 0) entryDiv.classList.add('offline');
 
-      entryDiv.innerHTML = `<div class="server-name-container"><span class="server-name-text">${projectName}</span></div><div class="player-count-wrapper"><div class="player-count">${currentOnline} ${iconHtml}</div></div>`;
+      const rankClass =
+        index === 0 ? 'rank-gold' :
+        index === 1 ? 'rank-silver' :
+        index === 2 ? 'rank-bronze' : '';
 
-      const wrapper = entryDiv.querySelector('.player-count-wrapper');
-      const previousOnline = oldState[projectName];
-      if (typeof previousOnline !== 'undefined') {
-        if (currentOnline > previousOnline) {
-          entryDiv.classList.add('flash-up');
-          createGhost(wrapper, 'ghost-up', '+');
-        } else if (currentOnline < previousOnline) {
-          entryDiv.classList.add('flash-down');
-          createGhost(wrapper, 'ghost-down', '-');
-        }
-      }
+      const iconHtml = currentOnline === 0 ? '☠' : '<i class="fa-solid fa-user"></i>';
+
+      entryDiv.innerHTML = `
+        <div class="server-name-container">
+          <span class="rank-badge ${rankClass}">${index + 1}</span>
+          <span class="server-name-text">${projectName}</span>
+        </div>
+        <div class="player-count-wrapper">
+          <div class="player-count">${currentOnline} ${iconHtml}</div>
+        </div>`;
+
+      applyCountAnimation(entryDiv, currentOnline, oldState[projectName]);
       fragment.appendChild(entryDiv);
     });
     serversListContainer.innerHTML = '';
@@ -199,38 +176,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const servers = (groupedServers[projectName] || []).sort((a, b) => b.players - a.players);
     detailsServerList.innerHTML = '';
     panelTitle.textContent = projectName;
+
     if (servers.length === 0) {
-      detailsServerList.innerHTML = '<p class="loading-text">Нет активных серверов в этом проекте, либо они отфильтрованы.</p>';
+      detailsServerList.innerHTML = '<p class="loading-text">Нет активных серверов в этом проекте.</p>';
       return;
     }
+
     servers.forEach(server => {
       const currentOnline = server.players;
       const entryDiv = document.createElement('div');
       entryDiv.className = 'server-entry';
-      if (server.isMinecraft) {
-        entryDiv.classList.add('minecraft-server');
-      }
+      if (server.isMinecraft) entryDiv.classList.add('minecraft-server');
+      if (currentOnline === 0) entryDiv.classList.add('offline');
       entryDiv.style.cursor = 'default';
 
-      const iconHtml = currentOnline === 0 ?
-        '☠' :
-        '<i class="fa-solid fa-user"></i>';
+      const iconHtml = currentOnline === 0 ? '☠' : '<i class="fa-solid fa-user"></i>';
+      const namePrefix = server.isMinecraft
+        ? '<i class="fa-solid fa-cube" style="color: #cd7f32; margin-right: 4px;"></i>'
+        : '';
 
-      const namePrefix = server.isMinecraft ? '<i class="fa-solid fa-cube" style="color: #8B4513; margin-right: 8px;"></i>' : '';
+      entryDiv.innerHTML = `
+        <div class="server-name-container">
+          ${namePrefix}
+          <span class="server-name-text">${server.name}</span>
+        </div>
+        <div class="player-count-wrapper">
+          <div class="player-count">${currentOnline} ${iconHtml}</div>
+        </div>`;
 
-      entryDiv.innerHTML = `<div class="server-name-container">${namePrefix}<span class="server-name-text">${server.name}</span></div><div class="player-count-wrapper"><div class="player-count">${currentOnline} ${iconHtml}</div></div>`;
-
-      const wrapper = entryDiv.querySelector('.player-count-wrapper');
-      const previousOnline = previousServerState[server.name];
-      if (typeof previousOnline !== 'undefined') {
-        if (currentOnline > previousOnline) {
-          entryDiv.classList.add('flash-up');
-          createGhost(wrapper, 'ghost-up', '+');
-        } else if (currentOnline < previousOnline) {
-          entryDiv.classList.add('flash-down');
-          createGhost(wrapper, 'ghost-down', '-');
-        }
-      }
+      applyCountAnimation(entryDiv, currentOnline, previousServerState[server.name]);
       detailsServerList.appendChild(entryDiv);
     });
   }
@@ -252,10 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const serverEntry = event.target.closest('.server-entry');
     if (serverEntry && serverEntry.dataset.projectName) {
       const newProjectName = serverEntry.dataset.projectName;
-
-      if (!groupedServers[newProjectName] || groupedServers[newProjectName].length === 0) {
-        return;
-      }
+      if (!groupedServers[newProjectName] || groupedServers[newProjectName].length === 0) return;
 
       if (detailsPanel.classList.contains('is-open')) {
         if (currentlyOpenProject !== newProjectName) {
@@ -271,39 +242,17 @@ document.addEventListener('DOMContentLoaded', () => {
   closePanelBtn.addEventListener('click', hideDetailsPanel);
   detailsOverlay.addEventListener('click', hideDetailsPanel);
 
-  toggleEighteenPlusBtn.addEventListener('click', () => {
-    showEighteenPlusServers = !showEighteenPlusServers; 
-    toggleEighteenPlusBtn.textContent = showEighteenPlusServers ? 'Скрыть 18+ сервера' : 'Показать 18+ сервера';
-    fetchData();
-  });
-
-
   function updateClock() {
     const now = new Date();
-    const optionsDate = {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      timeZone: 'Europe/Moscow'
-    };
-    const optionsTime = {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      timeZone: 'Europe/Moscow'
-    };
-
+    const optionsDate = { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Moscow' };
+    const optionsTime = { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Moscow' };
     const mskDate = now.toLocaleDateString('ru-RU', optionsDate);
     const mskTime = now.toLocaleTimeString('ru-RU', optionsTime);
-
     currentTimeElement.textContent = `${mskDate} ${mskTime}`;
   }
 
   fetchData();
   setInterval(fetchData, 5000);
-
   updateClock();
   setInterval(updateClock, 1000);
 });
-
-
