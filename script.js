@@ -317,8 +317,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ? (() => {
           const diff = Math.floor((Date.now() - new Date(server.round_start_time)) / 60000);
           return diff < 60
-            ? `${diff} минут`
-            : `${Math.floor(diff / 60)}ч ${diff % 60}минут`;
+            ? `${diff} мин`
+            : `${Math.floor(diff / 60)}ч ${diff % 60} мин`;
         })()
       : null;
 
@@ -467,3 +467,4 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
 });
+
