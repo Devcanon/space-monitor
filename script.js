@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${server.isMinecraft ? '<i class="fa-solid fa-cube" style="color:#cd7f32;margin-right:7px"></i>' : ''}
           ${server.name}
         </div>
-        ${is18 ? '<div class="hub-18badge">🔞 Сервер для взрослых (18+)</div>' : ''}
+        ${is18 ? '<div class="hub-18badge">🔞 ЕРП сервер (18+)</div>' : ''}
 
         <div class="hub-detail-grid">
           <div class="hub-detail-row">
@@ -467,4 +467,5 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
 });
+
 
