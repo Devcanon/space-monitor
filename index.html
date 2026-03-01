@@ -18,28 +18,64 @@
 <body>
   <div class="main-wrapper">
     <div class="monitor-container">
+
       <div class="header-block">
         <h1>Онлайны проектов</h1>
       </div>
+
+      <div class="mode-tabs">
+        <button id="tab-projects" class="mode-tab active">
+          <i class="fa-solid fa-layer-group"></i> Проекты
+        </button>
+        <button id="tab-hub" class="mode-tab">
+          <i class="fa-solid fa-globe"></i> Весь хаб
+        </button>
+      </div>
+
       <div id="current-time" class="current-time"></div>
+
+      <div id="stats-bar" class="stats-bar">
+        <div class="stat-item">
+          <span class="stat-val" id="stat-total">—</span>
+          <span class="stat-lbl">игроков</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <span class="stat-val col-green" id="stat-active">—</span>
+          <span class="stat-lbl">онлайн</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <span class="stat-val col-red" id="stat-inactive">—</span>
+          <span class="stat-lbl">офлайн</span>
+        </div>
+        <div class="stat-sep"></div>
+        <div class="stat-item">
+          <span class="stat-val col-pink" id="stat-18plus">—</span>
+          <span class="stat-lbl">серверов 18+</span>
+        </div>
+      </div>
+
       <div id="servers-list">
         <p class="loading-text">Загрузка данных с API...</p>
       </div>
+
       <div class="footer">
         <p>Данные обновляются каждые 5 секунд</p>
       </div>
     </div>
+
     <div id="details-panel" class="details-panel">
       <div class="panel-content-wrapper">
         <div class="panel-header">
           <h2 id="panel-title">Детали проекта</h2>
           <button id="close-panel-btn" class="close-panel-btn">&times;</button>
         </div>
-        <div id="details-server-list" class="panel-body">
-        </div>
+        <div id="details-server-list" class="panel-body"></div>
       </div>
     </div>
   </div>
+
   <div id="details-overlay" class="details-overlay"></div>
   <script src="script.js"></script>
 </body>
