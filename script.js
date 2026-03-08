@@ -338,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elCurrent) elCurrent.textContent = live;
     if (elMax)     elMax.textContent     = maxStat;
     if (elAvg)     elAvg.textContent     = avgStat;
-    if (elDate)    elDate.textContent    = `Сутки МСК: ${getMoscowDateStr()}`;
+    if (elDate) elDate.innerHTML = `График обновляется каждые 5 минут<br>Сутки МСК: ${getMoscowDateStr()}`;
   }
 
   function buildChart(projectName) {
@@ -916,4 +916,5 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
 });
+
 
