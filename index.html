@@ -17,6 +17,52 @@
 
 <body>
   <div class="main-wrapper">
+
+    <!-- ═══ ЛЕВАЯ ПАНЕЛЬ — График онлайна ═══ -->
+    <div id="chart-panel" class="chart-panel">
+      <div class="chart-panel-wrapper">
+
+        <div class="chart-panel-header">
+          <div class="chart-header-left">
+            <i class="fa-solid fa-chart-line chart-header-icon"></i>
+            <h2 id="chart-panel-title">График онлайна</h2>
+          </div>
+          <button id="close-chart-btn" class="close-panel-btn">&times;</button>
+        </div>
+
+        <div class="chart-panel-body">
+
+          <!-- Мини-статистика за сутки -->
+          <div class="chart-day-stats">
+            <div class="chart-day-stat">
+              <span class="chart-day-val" id="chart-stat-current">—</span>
+              <span class="chart-day-lbl">сейчас</span>
+            </div>
+            <div class="chart-day-sep"></div>
+            <div class="chart-day-stat">
+              <span class="chart-day-val col-green" id="chart-stat-max">—</span>
+              <span class="chart-day-lbl">макс. сегодня</span>
+            </div>
+            <div class="chart-day-sep"></div>
+            <div class="chart-day-stat">
+              <span class="chart-day-val" id="chart-stat-avg">—</span>
+              <span class="chart-day-lbl">среднее</span>
+            </div>
+          </div>
+
+          <!-- Холст графика -->
+          <div class="chart-canvas-wrap">
+            <canvas id="online-chart"></canvas>
+          </div>
+
+          <!-- Подпись даты -->
+          <div class="chart-date-label" id="chart-date-label"></div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ЦЕНТР — Основной монитор ═══ -->
     <div class="monitor-container">
 
       <div class="header-block">
@@ -65,6 +111,7 @@
       </div>
     </div>
 
+    <!-- ═══ ПРАВАЯ ПАНЕЛЬ — Серверы проекта ═══ -->
     <div id="details-panel" class="details-panel">
       <div class="panel-content-wrapper">
         <div class="panel-header">
@@ -74,9 +121,13 @@
         <div id="details-server-list" class="panel-body"></div>
       </div>
     </div>
+
   </div>
 
   <div id="details-overlay" class="details-overlay"></div>
+
+  <!-- Chart.js CDN — обязательно ДО script.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <script src="script.js"></script>
 </body>
 
