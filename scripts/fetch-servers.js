@@ -3,11 +3,11 @@ const path = require('path');
 
 const API_URL    = 'https://hub.spacestation14.com/api/servers';
 const DATA_FILE  = path.join(__dirname, '../data/history.json');
-const MAX_POINTS = 288;  // 5 мин × 288 = 24 часа
+const MAX_POINTS = 288;  // ~24 часа при шаге ~5 мин
 
 function getMoscowDateStr() {
   return new Date(Date.now() + 3 * 60 * 60 * 1000)
-    .toISOString().slice(0, 10);
+    .toISOString().slice(0, 10); // "гггг-мм-дд"
 }
 
 const SERVER_GROUPS = {
@@ -23,11 +23,27 @@ const SERVER_GROUPS = {
   'Сталкер':           ['Stalker'],
 };
 
+async function fetchWithTimeout(url, ms) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(id);
+    return res;
+  } catch (e) {
+    clearTimeout(id);
+    throw e;
+  }
+}
+
 async function main() {
   let stored = {};
   if (fs.existsSync(DATA_FILE)) {
-    try { stored = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')); }
-    catch { stored = {}; }
+    try {
+      stored = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+    } catch {
+      stored = {};
+    }
   }
 
   const today = getMoscowDateStr();
@@ -36,10 +52,12 @@ async function main() {
   }
   if (!stored.projects) stored.projects = {};
 
-  const res = await fetch(API_URL);
+  // ── запрос к API с таймаутом 8 секунд ──
+  const res = await fetchWithTimeout(API_URL, 8000);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   const servers = await res.json();
 
+  // ── суммируем онлайн по проектам ──
   const totals = {};
   for (const name in SERVER_GROUPS) totals[name] = 0;
 
@@ -55,6 +73,7 @@ async function main() {
     }
   }
 
+  // ── добавляем новую точку ──
   const now = Date.now();
   for (const [name, players] of Object.entries(totals)) {
     if (!stored.projects[name]) stored.projects[name] = [];
@@ -66,7 +85,10 @@ async function main() {
 
   fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
   fs.writeFileSync(DATA_FILE, JSON.stringify(stored));
-  console.log(`✓ Saved — ${today} — ${new Date(now).toISOString()}`);
+  console.log(`✓ Saved stats for ${today} at ${new Date(now).toISOString()}`);
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+main().catch(err => {
+  console.error('Fetcher failed:', err);
+  process.exit(1);
+});
