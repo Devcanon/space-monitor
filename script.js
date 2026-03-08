@@ -93,13 +93,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function buildDayTimeline(history) {
     const sorted = [...history].sort((a, b) => a[0] - b[0]);
-    if (sorted.length === 0) return { labels: [], data: [] };
-  
     const now    = Date.now();
     const labels = [];
     const data   = [];
   
-    // Только реальные точки из Actions — без заполнения пропусков
+    // Если истории нет — показываем хотя бы одну живую точку
+    if (sorted.length === 0) {
+      const live = getLiveValue(currentlyOpenProject);
+      labels.push(new Date(now).toLocaleTimeString('ru-RU', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
+      }));
+      data.push(live);
+      // Правый отступ
+      for (let p = 1; p <= 1; p++) {
+        labels.push('');
+        data.push(null);
+      }
+      return { labels, data };
+    }
+  
+    // Реальные точки из Actions
     for (const [ts, val] of sorted) {
       labels.push(new Date(ts).toLocaleTimeString('ru-RU', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
@@ -107,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
       data.push(val);
     }
   
-    // Добавляем живую точку "сейчас" если она новее последней записи
+    // Живая точка "сейчас"
     const lastTs  = sorted[sorted.length - 1][0];
     const liveVal = getLiveValue(currentlyOpenProject);
     if (now - lastTs > 60_000) {
@@ -116,14 +129,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }));
       data.push(liveVal);
     } else {
-      // Обновляем последнюю точку живым значением
       data[data.length - 1] = liveVal;
     }
   
     // Правый отступ = столько же точек → линия по центру
     const realCount = data.length;
     for (let p = 1; p <= realCount; p++) {
-      const ts = now + p * 5 * 60_000;   // шаг 5 мин для красивых подписей
+      const ts = now + p * 5 * 60_000;
       labels.push(new Date(ts).toLocaleTimeString('ru-RU', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
       }));
@@ -345,12 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const history          = loadHistory(projectName);
     const live             = getLiveValue(projectName);
     const { labels, data } = buildDayTimeline(history);
-
-    let lastNonNull = -1;
-    for (let i = data.length - 1; i >= 0; i--) {
-      if (data[i] !== null) { lastNonNull = i; break; }
-    }
-    if (lastNonNull !== -1) data[lastNonNull] = live;
 
     // Если график уже есть — просто обновляем данные без пересоздания
     if (chartInstance) {
@@ -916,5 +922,4 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
 });
-
 
