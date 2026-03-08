@@ -92,49 +92,45 @@ document.addEventListener('DOMContentLoaded', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   function buildDayTimeline(history) {
-    const midnight = getMoscowMidnight();
-    const now      = Date.now();
-    const live     = getLiveValue(currentlyOpenProject);
-    const STEP     = 5 * 60_000;   // шаг 5 минут
+    const sorted = [...history].sort((a, b) => a[0] - b[0]);
+    const now    = Date.now();
+    const live   = getLiveValue(currentlyOpenProject);
   
-    const sorted         = [...history].sort((a, b) => a[0] - b[0]);
-    const firstPointTime = sorted.length > 0 ? sorted[0][0] : Infinity;
-  
-    // Привязываем каждую точку истории к ближайшему 5-минутному слоту
-    const slotMap = new Map();
-    for (const [ts, val] of sorted) {
-      const slot = Math.round((ts - midnight) / STEP);
-      slotMap.set(slot, val);
+    // Если истории нет — одна живая точка
+    if (sorted.length === 0) {
+      const timeStr = new Date(now).toLocaleTimeString('ru-RU', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
+      });
+      return { labels: [timeStr, '', ''], data: [live, null, null] };
     }
   
-    const currentSlot = Math.floor((now - midnight) / STEP);
-    const labels      = [];
-    const data        = [];
-    let lastKnownVal  = 0;
+    const labels = [];
+    const data   = [];
   
-    // От 00:00 МСК до текущего момента, шаг 5 мин
-    for (let s = 0; s <= currentSlot; s++) {
-      const ts = midnight + s * STEP;
+    // Только реальные точки из Actions
+    for (const [ts, val] of sorted) {
       labels.push(new Date(ts).toLocaleTimeString('ru-RU', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
       }));
-    
-      if (ts < firstPointTime) {
-        // До первого запуска Actions — ноль
-        data.push(0);
-      } else {
-        if (slotMap.has(s)) lastKnownVal = slotMap.get(s);
-        data.push(lastKnownVal);
-      }
+      data.push(val);
     }
   
-    // Крайняя точка = живой онлайн
-    if (data.length > 0) data[data.length - 1] = live;
+    // Живая точка "сейчас" если она новее последней записи
+    const lastTs = sorted[sorted.length - 1][0];
+    if (now - lastTs > 60_000) {
+      labels.push(new Date(now).toLocaleTimeString('ru-RU', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
+      }));
+      data.push(live);
+    } else {
+      // Обновляем последнюю точку живым значением
+      data[data.length - 1] = live;
+    }
   
-    // Правый отступ = столько же слотов → текущая точка по центру
+    // Правый отступ = столько же точек сколько реальных → линия по центру
     const realCount = data.length;
     for (let p = 1; p <= realCount; p++) {
-      const ts = midnight + (currentSlot + p) * STEP;
+      const ts = now + p * 5 * 60_000;
       labels.push(new Date(ts).toLocaleTimeString('ru-RU', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
       }));
