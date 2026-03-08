@@ -1,10 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-  const API_URL            = 'https://hub.spacestation14.com/api/servers';
-  const MINECRAFT_API_URL  = 'https://api.mcstatus.io/v2/status/java/corvaxcraft.ru';
-  const STORAGE_PREFIX     = 'ss14_chart_';
-  const MAX_POINTS         = 1440;
-  const RECORD_INTERVAL_MS = 60_000;
+  const API_URL           = 'https://hub.spacestation14.com/api/servers';
+  const MINECRAFT_API_URL = 'https://api.mcstatus.io/v2/status/java/corvaxcraft.ru';
+  const HISTORY_URL       = '/data/history.json';
 
   // ─── DOM refs ─────────────────────────────────────────────────────────────
 
@@ -22,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const closeChartBtn        = document.getElementById('close-chart-btn');
   const onlineChartCanvas    = document.getElementById('online-chart');
 
-  // Скрываем кнопку закрытия у панели графика
   if (closeChartBtn) closeChartBtn.style.display = 'none';
 
   // ─── State ────────────────────────────────────────────────────────────────
@@ -38,10 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let allServersRaw          = [];
   let processedProjectState  = {};
   let chartInstance          = null;
-  let lastRecordTime         = 0;
   let chartLastLiveValue     = -1;
   let chartLastHistoryLen    = -1;
-  let previousFirstProject   = null;   // для отслеживания смены лидера
+  let previousFirstProject   = null;
+  let sharedHistory          = null;
 
   const SERVER_GROUPS = {
     'Корвакс':           ['Corvax'],
@@ -57,8 +54,23 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // БЛОК 1 — LocalStorage / История
+  // БЛОК 1 — История (GitHub Actions → history.json)
   // ═══════════════════════════════════════════════════════════════════════════
+
+  async function loadSharedHistory() {
+    try {
+      const res = await fetch(HISTORY_URL + '?t=' + Math.floor(Date.now() / 30000));
+      if (!res.ok) throw new Error();
+      sharedHistory = await res.json();
+    } catch {
+      sharedHistory = null;
+    }
+  }
+
+  function loadHistory(projectName) {
+    if (!sharedHistory?.projects) return [];
+    return sharedHistory.projects[projectName] || [];
+  }
 
   function getMoscowDateStr() {
     return new Date().toLocaleDateString('ru-RU', {
@@ -75,79 +87,35 @@ document.addEventListener('DOMContentLoaded', () => {
     ).getTime();
   }
 
-  function storageKey(projectName) {
-    return `${STORAGE_PREFIX}${projectName}__${getMoscowDateStr()}`;
-  }
-
-  function loadHistory(projectName) {
-    try {
-      const raw = localStorage.getItem(storageKey(projectName));
-      return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
-  }
-
-  function saveHistory(projectName, points) {
-    try {
-      localStorage.setItem(storageKey(projectName), JSON.stringify(points.slice(-MAX_POINTS)));
-    } catch {
-      pruneOldStorage();
-      try {
-        localStorage.setItem(storageKey(projectName), JSON.stringify(points.slice(-MAX_POINTS)));
-      } catch {}
-    }
-  }
-
-  function pruneOldStorage() {
-    const today = getMoscowDateStr();
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const k = localStorage.key(i);
-      if (k?.startsWith(STORAGE_PREFIX) && !k.includes(today)) localStorage.removeItem(k);
-    }
-  }
-
-  function recordAllProjects(state) {
-    const now = Date.now();
-    if (now - lastRecordTime < RECORD_INTERVAL_MS) return;
-    lastRecordTime = now;
-    for (const [name, players] of Object.entries(state)) {
-      const hist = loadHistory(name);
-      hist.push([now, players]);
-      saveHistory(name, hist);
-    }
-    if (Math.random() < 0.05) pruneOldStorage();
-  }
-
   // ═══════════════════════════════════════════════════════════════════════════
-  // БЛОК 2 — Временная шкала суток (00:00 → 23:59 МСК)
+  // БЛОК 2 — Временная шкала (от 00:00 до сейчас + зеркальный отступ справа)
   // ═══════════════════════════════════════════════════════════════════════════
 
   function buildDayTimeline(history) {
     const midnight      = getMoscowMidnight();
     const now           = Date.now();
-    const currentMinute = Math.min(Math.floor((now - midnight) / 60_000), 1439);
+    const currentMinute = Math.floor((now - midnight) / 60_000);
 
-    const sorted = [...history].sort((a, b) => a[0] - b[0]);
+    const sorted         = [...history].sort((a, b) => a[0] - b[0]);
     const firstPointTime = sorted.length > 0 ? sorted[0][0] : Infinity;
 
     const minuteMap = new Map();
     for (const [ts, val] of sorted) {
       const idx = Math.floor((ts - midnight) / 60_000);
-      if (idx >= 0 && idx < 1440) minuteMap.set(idx, val);
+      if (idx >= 0) minuteMap.set(idx, val);
     }
 
     const labels = [];
     const data   = [];
     let lastKnownVal = 0;
 
-    for (let m = 0; m < 1440; m++) {
+    // Реальные данные: 00:00 → сейчас
+    for (let m = 0; m <= currentMinute; m++) {
       const ts = midnight + m * 60_000;
       labels.push(new Date(ts).toLocaleTimeString('ru-RU', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
       }));
-
-      if (m > currentMinute) {
-        data.push(null);
-      } else if (ts < firstPointTime) {
+      if (ts < firstPointTime) {
         data.push(0);
       } else {
         if (minuteMap.has(m)) lastKnownVal = minuteMap.get(m);
@@ -155,11 +123,21 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    // Правый отступ = столько же точек → линия по центру
+    const realCount = currentMinute + 1;
+    for (let p = 1; p <= realCount; p++) {
+      const ts = midnight + (currentMinute + p) * 60_000;
+      labels.push(new Date(ts).toLocaleTimeString('ru-RU', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
+      }));
+      data.push(null);
+    }
+
     return { labels, data };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // БЛОК 3 — Chart.js: плагин пунктирных проекций
+  // БЛОК 3 — Плагин пунктирных проекций на графике
   // ═══════════════════════════════════════════════════════════════════════════
 
   const projectionLinesPlugin = {
@@ -168,7 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const dataset = chart.data.datasets[0];
       if (!dataset) return;
 
-      // Находим индекс последней не-null точки
       let lastIdx = -1;
       for (let i = dataset.data.length - 1; i >= 0; i--) {
         if (dataset.data[i] !== null && dataset.data[i] !== undefined) {
@@ -188,24 +165,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
       ctx.save();
 
-      // Пунктирные линии
       ctx.setLineDash([5, 5]);
-      ctx.strokeStyle = 'rgba(59, 165, 93, 0.30)';
+      ctx.strokeStyle = 'rgba(59,165,93,0.30)';
       ctx.lineWidth   = 1;
 
-      // Вертикальная: от точки вниз до оси X
+      // Вертикальная линия вниз
       ctx.beginPath();
       ctx.moveTo(px, py);
       ctx.lineTo(px, chartArea.bottom);
       ctx.stroke();
 
-      // Горизонтальная: от точки влево до оси Y
+      // Горизонтальная линия влево
       ctx.beginPath();
       ctx.moveTo(px, py);
       ctx.lineTo(chartArea.left, py);
       ctx.stroke();
 
-      // Точка на пересечении с осью X (засечка)
+      // Засечка на оси X
       ctx.setLineDash([]);
       ctx.strokeStyle = 'rgba(59,165,93,0.45)';
       ctx.lineWidth   = 2;
@@ -214,14 +190,14 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.lineTo(px, chartArea.bottom + 4);
       ctx.stroke();
 
-      // Точка на пересечении с осью Y (засечка)
+      // Засечка на оси Y
       ctx.beginPath();
       ctx.moveTo(chartArea.left - 4, py);
       ctx.lineTo(chartArea.left + 4, py);
       ctx.stroke();
 
-      // Кружок на самой точке
-      ctx.fillStyle = '#3ba55d';
+      // Кружок на точке
+      ctx.fillStyle   = '#3ba55d';
       ctx.shadowColor = 'rgba(59,165,93,0.6)';
       ctx.shadowBlur  = 6;
       ctx.beginPath();
@@ -261,44 +237,40 @@ document.addEventListener('DOMContentLoaded', () => {
       const angle = Math.random() * Math.PI * 2;
       const speed = 3.5 + Math.random() * 7;
       return {
-        x:    centerX,
-        y:    centerY,
-        vx:   Math.cos(angle) * speed,
-        vy:   Math.sin(angle) * speed - 2.5,
+        x:     centerX,
+        y:     centerY,
+        vx:    Math.cos(angle) * speed,
+        vy:    Math.sin(angle) * speed - 2.5,
         color: palette[Math.floor(Math.random() * palette.length)],
-        w:    4 + Math.random() * 7,
-        h:    2 + Math.random() * 4,
-        rot:  Math.random() * Math.PI * 2,
-        rotV: (Math.random() - 0.5) * 0.25,
+        w:     4 + Math.random() * 7,
+        h:     2 + Math.random() * 4,
+        rot:   Math.random() * Math.PI * 2,
+        rotV:  (Math.random() - 0.5) * 0.25,
         shape: Math.random() > 0.4 ? 'rect' : 'circle',
       };
     });
 
     const DURATION = 1600;
-    let   start    = null;
+    let start = null;
 
     function animateConfetti(ts) {
       if (!start) start = ts;
-      const elapsed = ts - start;
+      const elapsed  = ts - start;
       const progress = elapsed / DURATION;
-
       ctx2.clearRect(0, 0, canvas.width, canvas.height);
 
       for (const p of particles) {
         p.x   += p.vx;
         p.y   += p.vy;
-        p.vy  += 0.18;   // гравитация
-        p.vx  *= 0.99;   // лёгкое трение
+        p.vy  += 0.18;
+        p.vx  *= 0.99;
         p.rot += p.rotV;
-
         const alpha = Math.max(0, 1 - progress * 1.1);
-
         ctx2.save();
         ctx2.globalAlpha = alpha;
         ctx2.fillStyle   = p.color;
         ctx2.translate(p.x, p.y);
         ctx2.rotate(p.rot);
-
         if (p.shape === 'rect') {
           ctx2.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
         } else {
@@ -309,11 +281,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx2.restore();
       }
 
-      if (elapsed < DURATION) {
-        requestAnimationFrame(animateConfetti);
-      } else {
-        canvas.remove();
-      }
+      if (elapsed < DURATION) requestAnimationFrame(animateConfetti);
+      else canvas.remove();
     }
 
     requestAnimationFrame(animateConfetti);
@@ -336,7 +305,6 @@ document.addEventListener('DOMContentLoaded', () => {
     chartPanel.classList.add('is-open');
     chartLastLiveValue  = -1;
     chartLastHistoryLen = -1;
-    // При открытии новой панели — всегда пересоздаём с нуля
     if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
     buildChart(projectName);
   }
@@ -358,140 +326,135 @@ document.addEventListener('DOMContentLoaded', () => {
     buildChart(currentlyOpenProject);
   }
 
-function buildChart(projectName) {
-  const history          = loadHistory(projectName);
-  const live             = getLiveValue(projectName);
-  const { labels, data } = buildDayTimeline(history);
+  function updateChartStats(history, live) {
+    const histValues = history.map(([, v]) => v);
+    const maxStat    = histValues.length ? Math.max(...histValues, live) : live;
+    const avgStat    = histValues.length
+      ? Math.round(histValues.reduce((a, b) => a + b, 0) / histValues.length)
+      : live;
 
-  // Обновляем крайнюю правую реальную точку живым значением
-  let lastNonNull = -1;
-  for (let i = data.length - 1; i >= 0; i--) {
-    if (data[i] !== null) { lastNonNull = i; break; }
+    const elCurrent = document.getElementById('chart-stat-current');
+    const elMax     = document.getElementById('chart-stat-max');
+    const elAvg     = document.getElementById('chart-stat-avg');
+    const elDate    = document.getElementById('chart-date-label');
+
+    if (elCurrent) elCurrent.textContent = live;
+    if (elMax)     elMax.textContent     = maxStat;
+    if (elAvg)     elAvg.textContent     = avgStat;
+    if (elDate)    elDate.textContent    = `Сутки МСК: ${getMoscowDateStr()}`;
   }
-  if (lastNonNull !== -1) data[lastNonNull] = live;
 
-  // ── Если график уже существует — только меняем данные, без пересоздания ──
-  if (chartInstance) {
-    chartInstance.data.labels          = labels;
-    chartInstance.data.datasets[0].data = data;
+  function buildChart(projectName) {
+    const history          = loadHistory(projectName);
+    const live             = getLiveValue(projectName);
+    const { labels, data } = buildDayTimeline(history);
 
-    // Пересчитываем оси Y
+    let lastNonNull = -1;
+    for (let i = data.length - 1; i >= 0; i--) {
+      if (data[i] !== null) { lastNonNull = i; break; }
+    }
+    if (lastNonNull !== -1) data[lastNonNull] = live;
+
+    // Если график уже есть — просто обновляем данные без пересоздания
+    if (chartInstance) {
+      chartInstance.data.labels           = labels;
+      chartInstance.data.datasets[0].data = data;
+
+      const nonNullData = data.filter(v => v !== null);
+      const maxVal      = nonNullData.length ? Math.max(...nonNullData, 1) : 10;
+      const yMax        = Math.ceil(maxVal * 1.3) || 10;
+      const stepSz      = Math.max(1, Math.ceil(maxVal / 5));
+      chartInstance.options.scales.y.max              = yMax;
+      chartInstance.options.scales.y.ticks.stepSize   = stepSz;
+      chartInstance.update('none');
+
+      updateChartStats(history, live);
+      return;
+    }
+
+    // Первый рендер
+    const ctx  = onlineChartCanvas.getContext('2d');
+    const h    = onlineChartCanvas.offsetHeight || 200;
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(59,165,93,0.38)');
+    grad.addColorStop(1, 'rgba(59,165,93,0.02)');
+
     const nonNullData = data.filter(v => v !== null);
     const maxVal      = nonNullData.length ? Math.max(...nonNullData, 1) : 10;
     const yMax        = Math.ceil(maxVal * 1.3) || 10;
     const stepSz      = Math.max(1, Math.ceil(maxVal / 5));
-    chartInstance.options.scales.y.max         = yMax;
-    chartInstance.options.scales.y.ticks.stepSize = stepSz;
 
-    // 'none' — мгновенно, без анимации
-    chartInstance.update('none');
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      plugins: [projectionLinesPlugin],
+      data: {
+        labels,
+        datasets: [{
+          label:                'Онлайн',
+          data,
+          borderColor:          '#3ba55d',
+          backgroundColor:      grad,
+          borderWidth:          2,
+          pointRadius:          0,
+          pointHoverRadius:     5,
+          pointBackgroundColor: '#3ba55d',
+          fill:                 true,
+          tension:              0.3,
+          spanGaps:             false,
+        }],
+      },
+      options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        animation:           false,
+        interaction:         { mode: 'index', intersect: false },
+        scales: {
+          x: {
+            ticks: {
+              color:         '#484848',
+              font:          { size: 10, family: 'Roboto' },
+              maxTicksLimit: 13,
+              maxRotation:   0,
+              autoSkip:      true,
+            },
+            grid:   { color: 'rgba(255,255,255,0.03)' },
+            border: { color: '#2a2a2a' },
+          },
+          y: {
+            min:  0,
+            max:  yMax,
+            ticks: {
+              color:    '#484848',
+              font:     { size: 10, family: 'Roboto' },
+              stepSize: stepSz,
+            },
+            grid:   { color: 'rgba(255,255,255,0.06)' },
+            border: { color: '#2a2a2a' },
+          },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1a1a1a',
+            borderColor:     '#303030',
+            borderWidth:     1,
+            titleColor:      '#888',
+            bodyColor:       '#f0f0f0',
+            titleFont:       { size: 11 },
+            bodyFont:        { size: 13, weight: '700' },
+            padding:         10,
+            filter:          item => item.parsed.y !== null,
+            callbacks: {
+              title: items => items[0].label,
+              label: ctx   => ` ${ctx.parsed.y} игроков`,
+            },
+          },
+        },
+      },
+    });
 
     updateChartStats(history, live);
-    return;
   }
-
-  // ── Первый рендер — создаём экземпляр ────────────────────────────────────
-  const ctx  = onlineChartCanvas.getContext('2d');
-  const h    = onlineChartCanvas.offsetHeight || 200;
-  const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, 'rgba(59,165,93,0.38)');
-  grad.addColorStop(1, 'rgba(59,165,93,0.02)');
-
-  const nonNullData = data.filter(v => v !== null);
-  const maxVal      = nonNullData.length ? Math.max(...nonNullData, 1) : 10;
-  const yMax        = Math.ceil(maxVal * 1.3) || 10;
-  const stepSz      = Math.max(1, Math.ceil(maxVal / 5));
-
-  chartInstance = new Chart(ctx, {
-    type: 'line',
-    plugins: [projectionLinesPlugin],
-    data: {
-      labels,
-      datasets: [{
-        label:                'Онлайн',
-        data,
-        borderColor:          '#3ba55d',
-        backgroundColor:      grad,
-        borderWidth:          2,
-        pointRadius:          0,
-        pointHoverRadius:     5,
-        pointBackgroundColor: '#3ba55d',
-        fill:                 true,
-        tension:              0.3,
-        spanGaps:             false,
-      }],
-    },
-    options: {
-      responsive:          true,
-      maintainAspectRatio: false,
-      animation:           false,   // ← полностью отключаем анимацию Chart.js
-      interaction:         { mode: 'index', intersect: false },
-      scales: {
-        x: {
-          ticks: {
-            color:         '#484848',
-            font:          { size: 10, family: 'Roboto' },
-            maxTicksLimit: 13,
-            maxRotation:   0,
-            autoSkip:      true,
-          },
-          grid:   { color: 'rgba(255,255,255,0.03)' },
-          border: { color: '#2a2a2a' },
-        },
-        y: {
-          min:  0,
-          max:  yMax,
-          ticks: {
-            color:    '#484848',
-            font:     { size: 10, family: 'Roboto' },
-            stepSize: stepSz,
-          },
-          grid:   { color: 'rgba(255,255,255,0.06)' },
-          border: { color: '#2a2a2a' },
-        },
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#1a1a1a',
-          borderColor:     '#303030',
-          borderWidth:     1,
-          titleColor:      '#888',
-          bodyColor:       '#f0f0f0',
-          titleFont:       { size: 11 },
-          bodyFont:        { size: 13, weight: '700' },
-          padding:         10,
-          filter:          item => item.parsed.y !== null,
-          callbacks: {
-            title: items => items[0].label,
-            label: ctx   => ` ${ctx.parsed.y} игроков`,
-          },
-        },
-      },
-    },
-  });
-
-  updateChartStats(history, live);
-}
-
-// Вынесено отдельно — обновление мини-статистики
-function updateChartStats(history, live) {
-  const histValues = history.map(([, v]) => v);
-  const maxStat    = histValues.length ? Math.max(...histValues, live) : live;
-  const avgStat    = histValues.length
-    ? Math.round(histValues.reduce((a, b) => a + b, 0) / histValues.length)
-    : live;
-
-  const elCurrent = document.getElementById('chart-stat-current');
-  const elMax     = document.getElementById('chart-stat-max');
-  const elAvg     = document.getElementById('chart-stat-avg');
-  const elDate    = document.getElementById('chart-date-label');
-
-  if (elCurrent) elCurrent.textContent = live;
-  if (elMax)     elMax.textContent     = maxStat;
-  if (elAvg)     elAvg.textContent     = avgStat;
-  if (elDate)    elDate.textContent    = `Сутки МСК: ${getMoscowDateStr()}`;
-}
 
   // ═══════════════════════════════════════════════════════════════════════════
   // БЛОК 6 — Fetch
@@ -512,6 +475,7 @@ function updateChartStats(history, live) {
           .then(res => { if (!res.ok) throw new Error(`${res.status}`); return res.json(); })
           .then(data => processData(data)),
         fetchMinecraftStatus(),
+        loadSharedHistory(),
       ]);
       renderStats();
       if (currentMode === 'projects') renderFinalList();
@@ -595,8 +559,6 @@ function updateChartStats(history, live) {
       pendingServerState['Corvax Craft'] = mc;
     }
 
-    recordAllProjects(cur);
-
     const sorted = Object.entries(cur).sort(([, a], [, b]) => b - a);
     renderProjectList(sorted, previousProjectState);
 
@@ -620,7 +582,7 @@ function updateChartStats(history, live) {
       return;
     }
 
-    // ── FLIP: шаг 1 — запоминаем старые позиции и ранги ─────────────────
+    // FLIP шаг 1 — запоминаем старые позиции
     const oldPositions = new Map();
     const oldRanks     = new Map();
     serversListContainer
@@ -630,7 +592,6 @@ function updateChartStats(history, live) {
         oldRanks.set(el.dataset.projectName, i);
       });
 
-    // ── Строим новый DOM ──────────────────────────────────────────────────
     const frag = document.createDocumentFragment();
     sortedProjects.forEach(([name, online], i) => {
       const div = document.createElement('div');
@@ -657,30 +618,26 @@ function updateChartStats(history, live) {
     serversListContainer.innerHTML = '';
     serversListContainer.appendChild(frag);
 
-    // ── FLIP: шаг 2 — анимируем перемещения ──────────────────────────────
+    // FLIP шаг 2 — анимируем перемещения
     const newElements = [...serversListContainer.querySelectorAll('.server-entry[data-project-name]')];
     newElements.forEach((el, newIdx) => {
       const name   = el.dataset.projectName;
       const oldPos = oldPositions.get(name);
-      if (!oldPos) return;  // новый элемент, без анимации
-
+      if (!oldPos) return;
       const newPos = el.getBoundingClientRect();
       const deltaY = oldPos.top - newPos.top;
-      if (Math.abs(deltaY) < 1) return;  // не двигался
+      if (Math.abs(deltaY) < 1) return;
 
       const oldRank  = oldRanks.has(name) ? oldRanks.get(name) : newIdx;
-      const movingUp = newIdx < oldRank;  // поднимается вверх по списку
+      const movingUp = newIdx < oldRank;
 
-      // Начальное состояние: элемент на старом месте + масштаб
-      el.style.position  = 'relative';
-      el.style.zIndex    = movingUp ? '3' : '1';
+      el.style.position   = 'relative';
+      el.style.zIndex     = movingUp ? '3' : '1';
       el.style.transition = 'none';
       el.style.transform  = `translateY(${deltaY}px) scale(${movingUp ? 1.04 : 0.96})`;
 
-      // Force reflow — обязательно перед запуском перехода
       void el.offsetHeight;
 
-      // Анимируем к новому месту
       el.style.transition = 'transform 0.44s cubic-bezier(0.4, 0, 0.2, 1)';
       el.style.transform  = 'translateY(0) scale(1)';
 
@@ -692,7 +649,7 @@ function updateChartStats(history, live) {
       }, 450);
     });
 
-    // ── Конфети при смене лидера ──────────────────────────────────────────
+    // Конфети при смене лидера
     const newFirst = sortedProjects[0]?.[0] ?? null;
     if (previousFirstProject !== null && newFirst && newFirst !== previousFirstProject) {
       const firstEl = newElements[0];
