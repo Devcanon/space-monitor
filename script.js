@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const API_URL           = 'https://hub.spacestation14.com/api/servers';
   const MINECRAFT_API_URL = 'https://api.mcstatus.io/v2/status/java/corvaxcraft.ru';
-  const HISTORY_URL       = '/data/history.json';
+  const HISTORY_URL       = 'data/history.json';
 
   // ─── DOM refs ─────────────────────────────────────────────────────────────
 
@@ -917,4 +917,5 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
 });
+
 
