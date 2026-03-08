@@ -92,47 +92,44 @@ document.addEventListener('DOMContentLoaded', () => {
   // ═══════════════════════════════════════════════════════════════════════════
 
   function buildDayTimeline(history) {
-    const midnight      = getMoscowMidnight();
-    const now           = Date.now();
-    const currentMinute = Math.floor((now - midnight) / 60_000);
-
-    const sorted         = [...history].sort((a, b) => a[0] - b[0]);
-    const firstPointTime = sorted.length > 0 ? sorted[0][0] : Infinity;
-
-    const minuteMap = new Map();
-    for (const [ts, val] of sorted) {
-      const idx = Math.floor((ts - midnight) / 60_000);
-      if (idx >= 0) minuteMap.set(idx, val);
-    }
-
+    const sorted = [...history].sort((a, b) => a[0] - b[0]);
+    if (sorted.length === 0) return { labels: [], data: [] };
+  
+    const now    = Date.now();
     const labels = [];
     const data   = [];
-    let lastKnownVal = 0;
-
-    // Реальные данные: 00:00 → сейчас
-    for (let m = 0; m <= currentMinute; m++) {
-      const ts = midnight + m * 60_000;
+  
+    // Только реальные точки из Actions — без заполнения пропусков
+    for (const [ts, val] of sorted) {
       labels.push(new Date(ts).toLocaleTimeString('ru-RU', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
       }));
-      if (ts < firstPointTime) {
-        data.push(0);
-      } else {
-        if (minuteMap.has(m)) lastKnownVal = minuteMap.get(m);
-        data.push(lastKnownVal);
-      }
+      data.push(val);
     }
-
+  
+    // Добавляем живую точку "сейчас" если она новее последней записи
+    const lastTs  = sorted[sorted.length - 1][0];
+    const liveVal = getLiveValue(currentlyOpenProject);
+    if (now - lastTs > 60_000) {
+      labels.push(new Date(now).toLocaleTimeString('ru-RU', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
+      }));
+      data.push(liveVal);
+    } else {
+      // Обновляем последнюю точку живым значением
+      data[data.length - 1] = liveVal;
+    }
+  
     // Правый отступ = столько же точек → линия по центру
-    const realCount = currentMinute + 1;
+    const realCount = data.length;
     for (let p = 1; p <= realCount; p++) {
-      const ts = midnight + (currentMinute + p) * 60_000;
+      const ts = now + p * 5 * 60_000;   // шаг 5 мин для красивых подписей
       labels.push(new Date(ts).toLocaleTimeString('ru-RU', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
       }));
       data.push(null);
     }
-
+  
     return { labels, data };
   }
 
@@ -919,3 +916,4 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
 });
+
