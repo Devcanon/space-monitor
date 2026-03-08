@@ -33,7 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'Губы': ['Goob'],
     'Визарды': ["Wizard's"],
     'СС220': ['SS220'],
-    'Время Приключений': ['Время']
+    'Время Приключений': ['Время'],
+    'Сталкер': ['Stalker RU']
   };
 
   // ─── Fetch ────────────────────────────────────────────────────────────────
@@ -467,5 +468,6 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
 });
+
 
 
