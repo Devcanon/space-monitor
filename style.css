@@ -1,20 +1,20 @@
 :root {
   --animation-duration: 0.7s;
-  --bg-body: #141414;
-  --bg-card: #1e1e1e;
-  --bg-panel: #232323;
-  --bg-entry-hover: rgba(255, 255, 255, 0.04);
-  --border-color: #303030;
-  --accent-online: #3ba55d;
-  --accent-offline: #444;
-  --text-primary: #f0f0f0;
-  --text-muted: #5a5a5a;
-  --rank-gold: #f0a500;
-  --rank-silver: #a8a9ad;
-  --rank-bronze: #cd7f32;
-  --color-up: #3ba55d;
-  --color-down: #ed4245;
-  --color-pink: #e879f9;
+  --bg-body:          #141414;
+  --bg-card:          #1e1e1e;
+  --bg-panel:         #232323;
+  --bg-entry-hover:   rgba(255, 255, 255, 0.04);
+  --border-color:     #303030;
+  --accent-online:    #3ba55d;
+  --accent-offline:   #444;
+  --text-primary:     #f0f0f0;
+  --text-muted:       #5a5a5a;
+  --rank-gold:        #f0a500;
+  --rank-silver:      #a8a9ad;
+  --rank-bronze:      #cd7f32;
+  --color-up:         #3ba55d;
+  --color-down:       #ed4245;
+  --color-pink:       #e879f9;
 }
 
 * { box-sizing: border-box; }
@@ -35,7 +35,6 @@ body {
 .main-wrapper {
   display: flex;
   justify-content: center;
-  /* Важно: align-items: flex-start позволяет sticky работать корректно */
   align-items: flex-start;
   margin: 0 auto;
   max-width: fit-content;
@@ -147,7 +146,7 @@ h1 {
 
 .stat-sep { width: 1px; height: 26px; background: var(--border-color); }
 
-.col-green { color: var(--color-up) !important; }
+.col-green { color: var(--color-up)   !important; }
 .col-red   { color: var(--color-down) !important; }
 .col-pink  { color: var(--color-pink) !important; }
 
@@ -173,6 +172,7 @@ h1 {
   cursor: pointer;
   transition: background-color 0.18s ease, border-left-color 0.25s ease;
   margin-bottom: 1px;
+  will-change: transform;   /* нужно для FLIP-анимации тасовки */
 }
 
 .server-entry.offline {
@@ -246,7 +246,6 @@ h1 {
   flex-wrap: wrap;
 }
 
-/* Тег-бейджи под названием сервера в хаб-листе */
 .hub-tag-small {
   font-size: 0.6em;
   color: #4a4a4a;
@@ -294,7 +293,7 @@ h1 {
   border-color: rgba(59,165,93,0.18);
 }
 
-/* ── Change animations ── */
+/* ── Flash / count animations ── */
 .flash-up   { animation: flash-green 1.4s ease-out; }
 .flash-down { animation: flash-red   1.4s ease-out; }
 
@@ -334,90 +333,21 @@ h1 {
   100% { transform: translateX(0);    box-shadow: 0 0 0    rgba(237,66,69,0); }
 }
 
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.8em;
+  color: var(--text-muted);
+}
+
+.footer p { margin: 0; }
+
 /* ════════════════════════════════════════════
-   ДЕТАЛИ-ПАНЕЛЬ — sticky на десктопе
+   ХАБ — детали сервера
    ════════════════════════════════════════════ */
-.details-panel {
-  /* Следует за прокруткой страницы, всегда в видимой области */
-  position: sticky;
-  top: 40px;
-  align-self: flex-start;
-
-  width: 0;
-  /* Высота = высота вьюпорта минус отступы body сверху+снизу */
-  height: calc(100vh - 80px);
-  overflow: hidden;
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 10;
-}
-
-.details-panel.is-open { width: 420px; }
-
-.panel-content-wrapper {
-  width: 420px;
-  height: 100%;
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border-color);
-  border-left: none;
-  border-radius: 0 14px 14px 0;
-  display: flex;
-  flex-direction: column;
-  transform: translateX(-100%);
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.details-panel.is-open .panel-content-wrapper { transform: translateX(0); }
-
-.details-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background-color: rgba(0,0,0,0.5);
-  backdrop-filter: blur(2px);
-  z-index: 5;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.4s ease, visibility 0.4s ease;
-}
-
-/* На десктопе оверлей не нужен — панель sticky, фон не перекрывает */
-@media (min-width: 769px) {
-  .details-overlay { display: none; }
-}
-
-.details-overlay.is-open { opacity: 1; visibility: visible; }
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.panel-header h2 { margin: 0; font-size: 1.1em; letter-spacing: 0.02em; }
-
-.close-panel-btn {
-  background: none;
-  border: none;
-  color: #444;
-  font-size: 2.2em;
-  line-height: 0.5;
-  cursor: pointer;
-  padding: 4px;
-  transition: color 0.2s;
-}
-
-.close-panel-btn:hover { color: #fff; }
-
-.panel-body {
-  padding: 8px 10px;
-  overflow-y: auto;
-  flex-grow: 1;
-}
-
-/* ── Hub detail panel content ── */
 .hub-detail { padding: 4px 4px 24px; }
 
 .hub-detail-name {
@@ -496,17 +426,221 @@ h1 {
 
 .no-data { font-size: 0.8em; color: #3a3a3a; font-style: italic; }
 
-/* ── Footer ── */
-.footer {
-  text-align: center;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border-color);
-  font-size: 0.8em;
-  color: var(--text-muted);
+/* ════════════════════════════════════════════
+   ПРАВАЯ ПАНЕЛЬ — Серверы проекта
+   ════════════════════════════════════════════ */
+.details-panel {
+  position: sticky;
+  top: 57px;
+  align-self: flex-start;
+  width: 0;
+  height: calc(95vh - 80px);
+  overflow: hidden;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
 }
 
-.footer p { margin: 0; }
+.details-panel.is-open { width: 420px; }
+
+.panel-content-wrapper {
+  width: 420px;
+  height: 100%;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-left: none;
+  border-radius: 0 14px 14px 0;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.details-panel.is-open .panel-content-wrapper { transform: translateX(0); }
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.panel-header h2 { margin: 0; font-size: 1.1em; letter-spacing: 0.02em; }
+
+.close-panel-btn {
+  background: none;
+  border: none;
+  color: #444;
+  font-size: 2.2em;
+  line-height: 0.5;
+  cursor: pointer;
+  padding: 4px;
+  transition: color 0.2s;
+}
+
+.close-panel-btn:hover { color: #fff; }
+
+.panel-body {
+  padding: 8px 10px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+/* ── Overlay ── */
+.details-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  backdrop-filter: blur(2px);
+  z-index: 5;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+@media (min-width: 769px) {
+  .details-overlay { display: none; }
+}
+
+.details-overlay.is-open { opacity: 1; visibility: visible; }
+
+/* ════════════════════════════════════════════
+   ЛЕВАЯ ПАНЕЛЬ — График онлайна
+   ════════════════════════════════════════════ */
+.chart-panel {
+  position: sticky;
+  top: 57px;
+  align-self: flex-start;
+  order: -1;                  /* левее монитора во flex */
+  width: 0;
+  height: calc(95vh - 80px);
+  overflow: hidden;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+}
+
+.chart-panel.is-open { width: 650px; }
+
+.chart-panel-wrapper {
+  width: 650px;
+  height: 100%;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-right: none;
+  border-radius: 14px 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  /* Стартует правее (за пределом) → въезжает влево */
+  transform: translateX(100%);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chart-panel.is-open .chart-panel-wrapper { transform: translateX(0); }
+
+/* ── Chart header ── */
+.chart-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.chart-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.chart-header-icon {
+  color: var(--accent-online);
+  font-size: 1em;
+  flex-shrink: 0;
+}
+
+.chart-panel-header h2 {
+  margin: 0;
+  font-size: 1.05em;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Chart body ── */
+.chart-panel-body {
+  padding: 14px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+/* ── Мини-статистика ── */
+.chart-day-stats {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: rgba(255,255,255,0.018);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px 8px;
+  flex-shrink: 0;
+}
+
+.chart-day-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.chart-day-val {
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #e8e8e8;
+  line-height: 1;
+}
+
+.chart-day-lbl {
+  font-size: 0.58em;
+  color: #3d3d3d;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chart-day-sep {
+  width: 1px;
+  height: 28px;
+  background: var(--border-color);
+}
+
+/* ── Canvas ── */
+.chart-canvas-wrap {
+  flex-grow: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.chart-canvas-wrap canvas {
+  width:  100% !important;
+  height: 100% !important;
+}
+
+/* ── Подпись даты ── */
+.chart-date-label {
+  text-align: center;
+  font-size: 0.65em;
+  color: #2e2e2e;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+  padding-bottom: 2px;
+}
 
 /* ════════════════════════════════════════════
    МОБИЛЬНЫЕ (≤768px)
@@ -569,18 +703,16 @@ h1 {
     margin-top: 4px;
   }
 
-  /* На мобиле панель — fullscreen fixed */
+  /* Правая панель — fullscreen */
   .details-panel {
     position: fixed !important;
-    top: 0 !important;
-    left: 0;
+    top: 0 !important; left: 0;
     width: 100% !important;
     height: 100% !important;
     transform: translateX(-100%);
     transition: transform 0.35s ease-in-out;
     z-index: 20;
     overflow: hidden;
-    max-width: none;
   }
 
   .details-panel.is-open {
@@ -598,4 +730,7 @@ h1 {
   }
 
   .details-overlay { display: block; }
+
+  /* Левая панель (график) — на мобиле не нужна */
+  .chart-panel { display: none !important; }
 }
