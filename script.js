@@ -397,7 +397,8 @@ document.addEventListener('DOMContentLoaded', () => {
           pointHoverRadius:     5,
           pointBackgroundColor: '#3ba55d',
           fill:                 true,
-          tension:              0.3,
+          tension:              0,
+          stepped:              'before',
           spanGaps:             false,
         }],
       },
@@ -917,5 +918,6 @@ document.addEventListener('DOMContentLoaded', () => {
   updateClock();
   setInterval(updateClock, 1000);
 });
+
 
 
