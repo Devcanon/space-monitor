@@ -556,6 +556,110 @@ h1 {
   min-width: 0;
 }
 
+.chart-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Style picker ── */
+.chart-style-picker {
+  position: relative;
+}
+
+.chart-style-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: #888;
+  font-size: 0.75em;
+  font-family: 'Roboto', sans-serif;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.chart-style-btn:hover {
+  background: rgba(255,255,255,0.09);
+  color: #ccc;
+  border-color: #444;
+}
+
+.chart-style-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #1c1c1c;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 5px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 200;
+  min-width: 170px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.55);
+}
+
+.chart-style-dropdown.is-open {
+  display: flex;
+}
+
+.chart-style-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+  width: 100%;
+}
+
+.chart-style-option:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.chart-style-option.active {
+  background: rgba(59,165,93,0.12);
+}
+
+.cso-icon {
+  font-size: 1.1em;
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cso-label {
+  font-size: 0.82em;
+  color: #d0d0d0;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chart-style-option.active .cso-label {
+  color: var(--accent-online);
+}
+
+.cso-desc {
+  font-size: 0.68em;
+  color: #555;
+  font-family: 'Roboto', sans-serif;
+  display: block;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
 .chart-header-icon {
   color: var(--accent-online);
   font-size: 1em;
@@ -630,6 +734,7 @@ h1 {
 .chart-canvas-wrap canvas {
   width:  100% !important;
   height: 100% !important;
+  cursor: crosshair;
 }
 
 /* ── Подпись даты ── */
