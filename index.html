@@ -27,7 +27,31 @@
             <i class="fa-solid fa-chart-line chart-header-icon"></i>
             <h2 id="chart-panel-title">График онлайна</h2>
           </div>
-          <button id="close-chart-btn" class="close-panel-btn">&times;</button>
+          <div class="chart-header-right">
+            <div class="chart-style-picker" id="chart-style-picker">
+              <button class="chart-style-btn" id="chart-style-btn">
+                <i class="fa-solid fa-palette"></i> Стиль
+              </button>
+              <div class="chart-style-dropdown" id="chart-style-dropdown">
+                <button class="chart-style-option" data-style="classic">
+                  <span class="cso-icon">〰</span>
+                  <span class="cso-label">Классика</span>
+                  <span class="cso-desc">Плавная линия</span>
+                </button>
+                <button class="chart-style-option" data-style="stock-step">
+                  <span class="cso-icon">⌐</span>
+                  <span class="cso-label">Биржевой</span>
+                  <span class="cso-desc">Ступенчатый</span>
+                </button>
+                <button class="chart-style-option" data-style="stock-smooth">
+                  <span class="cso-icon">📈</span>
+                  <span class="cso-label">Биржевой Smooth</span>
+                  <span class="cso-desc">Без ступеней</span>
+                </button>
+              </div>
+            </div>
+            <button id="close-chart-btn" class="close-panel-btn">&times;</button>
+          </div>
         </div>
 
         <div class="chart-panel-body">
