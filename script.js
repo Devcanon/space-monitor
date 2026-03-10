@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let chartLastHistoryLen    = -1;
   let previousFirstProject   = null;
   let sharedHistory          = null;
+  let chartStyle             = 'stock-step'; // 'classic' | 'stock-step' | 'stock-smooth'
 
   const SERVER_GROUPS = {
     'Корвакс':           ['Corvax'],
@@ -127,9 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
       data[data.length - 1] = live;
     }
   
-    // Правый отступ = столько же точек сколько реальных → линия по центру
-    const realCount = data.length;
-    for (let p = 1; p <= realCount; p++) {
+    // Правый отступ ≈ 25% от реальных точек → линия смещена вправо от центра
+    const realCount  = data.length;
+    const rightPad   = Math.max(2, Math.round(realCount * 0.25));
+    for (let p = 1; p <= rightPad; p++) {
       const ts = now + p * 5 * 60_000;
       labels.push(new Date(ts).toLocaleTimeString('ru-RU', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
@@ -139,6 +141,54 @@ document.addEventListener('DOMContentLoaded', () => {
   
     return { labels, data };
   }
+
+  // ─── Биржевой crosshair (вертикальная + горизонтальная линии при hover) ─
+  const stockCrosshairPlugin = {
+    id: 'stockCrosshair',
+    afterDraw(chart) {
+      if (!chart._crosshairX) return;
+      const { ctx, chartArea } = chart;
+      const x = chart._crosshairX;
+      const y = chart._crosshairY;
+
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth   = 1;
+      ctx.strokeStyle = 'rgba(180,180,180,0.25)';
+
+      // Вертикаль
+      ctx.beginPath();
+      ctx.moveTo(x, chartArea.top);
+      ctx.lineTo(x, chartArea.bottom);
+      ctx.stroke();
+
+      // Горизонталь
+      ctx.beginPath();
+      ctx.moveTo(chartArea.left, y);
+      ctx.lineTo(chartArea.right, y);
+      ctx.stroke();
+
+      ctx.restore();
+    },
+    afterEvent(chart, args) {
+      const event = args.event;
+      if (event.type === 'mousemove') {
+        const { left, right, top, bottom } = chart.chartArea;
+        if (event.x >= left && event.x <= right && event.y >= top && event.y <= bottom) {
+          chart._crosshairX = event.x;
+          chart._crosshairY = event.y;
+        } else {
+          chart._crosshairX = null;
+          chart._crosshairY = null;
+        }
+        chart.draw();
+      } else if (event.type === 'mouseout') {
+        chart._crosshairX = null;
+        chart._crosshairY = null;
+        chart.draw();
+      }
+    },
+  };
 
   // ═══════════════════════════════════════════════════════════════════════════
   // БЛОК 3 — Плагин пунктирных проекций на графике
@@ -348,59 +398,91 @@ document.addEventListener('DOMContentLoaded', () => {
     if (elDate) elDate.innerHTML = `График обновляется каждые 5 минут<br>Сутки МСК: ${getMoscowDateStr()}`;
   }
 
+  // ─── Биржевые цвета для сегментов (рост / падение) ──────────────────────
+  function buildStockSegments(data) {
+    // Возвращает массив цветов для каждого сегмента линии
+    const colors = [];
+    for (let i = 0; i < data.length; i++) {
+      if (i === 0 || data[i] === null || data[i - 1] === null) {
+        colors.push('rgba(59,165,93,0.0)');
+      } else if (data[i] >= data[i - 1]) {
+        colors.push('#3ba55d'); // рост — зелёный
+      } else {
+        colors.push('#ed4245'); // падение — красный
+      }
+    }
+    return colors;
+  }
+
   function buildChart(projectName) {
     const history          = loadHistory(projectName);
     const live             = getLiveValue(projectName);
     const { labels, data } = buildDayTimeline(history);
 
-    // Если график уже есть — просто обновляем данные без пересоздания
-    if (chartInstance) {
-      chartInstance.data.labels           = labels;
-      chartInstance.data.datasets[0].data = data;
-
-      const nonNullData = data.filter(v => v !== null);
-      const maxVal      = nonNullData.length ? Math.max(...nonNullData, 1) : 10;
-      const yMax        = Math.ceil(maxVal * 1.3) || 10;
-      const stepSz      = Math.max(1, Math.ceil(maxVal / 5));
-      chartInstance.options.scales.y.max              = yMax;
-      chartInstance.options.scales.y.ticks.stepSize   = stepSz;
-      chartInstance.update('none');
-
-      updateChartStats(history, live);
-      return;
-    }
-
-    // Первый рендер
-    const ctx  = onlineChartCanvas.getContext('2d');
-    const h    = onlineChartCanvas.offsetHeight || 200;
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, 'rgba(59,165,93,0.38)');
-    grad.addColorStop(1, 'rgba(59,165,93,0.02)');
+    const isClassic     = chartStyle === 'classic';
+    const isStockStep   = chartStyle === 'stock-step';
+    const isStockSmooth = chartStyle === 'stock-smooth';
+    const isStock       = isStockStep || isStockSmooth;
 
     const nonNullData = data.filter(v => v !== null);
     const maxVal      = nonNullData.length ? Math.max(...nonNullData, 1) : 10;
-    const yMax        = Math.ceil(maxVal * 1.3) || 10;
-    const stepSz      = Math.max(1, Math.ceil(maxVal / 5));
+
+    // Y-диапазон: классика от 0, биржевой — динамический
+    let yMin, yMax, stepSz;
+    if (isClassic) {
+      yMin   = 0;
+      yMax   = Math.ceil(maxVal * 1.3) || 10;
+      stepSz = Math.max(1, Math.ceil(maxVal / 5));
+    } else {
+      const minVal = nonNullData.length ? Math.min(...nonNullData) : 0;
+      const pad    = Math.max(1, Math.round((maxVal - minVal) * 0.15));
+      yMin   = Math.max(0, minVal - pad);
+      yMax   = Math.ceil(maxVal + pad) || 10;
+      stepSz = Math.max(1, Math.ceil((yMax - yMin) / 5));
+    }
+
+    const ctx  = onlineChartCanvas.getContext('2d');
+    const h    = onlineChartCanvas.offsetHeight || 200;
+    function makeGrad() {
+      const g = ctx.createLinearGradient(0, 0, 0, h);
+      if (isClassic) {
+        g.addColorStop(0, 'rgba(59,165,93,0.38)');
+        g.addColorStop(1, 'rgba(59,165,93,0.02)');
+      } else {
+        g.addColorStop(0, 'rgba(59,165,93,0.22)');
+        g.addColorStop(1, 'rgba(59,165,93,0.00)');
+      }
+      return g;
+    }
+
+    const segColors = buildStockSegments(data);
+
+    const datasetCfg = {
+      label:                'Онлайн',
+      data,
+      borderColor:          '#3ba55d',
+      backgroundColor:      makeGrad(),
+      borderWidth:          isClassic ? 2 : 2.5,
+      pointRadius:          0,
+      pointHoverRadius:     isClassic ? 5 : 0,
+      pointBackgroundColor: '#3ba55d',
+      fill:                 true,
+      tension:              0,
+      spanGaps:             false,
+      ...(isStockStep   ? { stepped: 'before' } : {}),
+      ...(isStock       ? { segment: { borderColor: c => segColors[c.p1DataIndex] || '#3ba55d' } } : {}),
+    };
+
+    const plugins = isClassic
+      ? [projectionLinesPlugin]
+      : [projectionLinesPlugin, stockCrosshairPlugin];
+
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 
     chartInstance = new Chart(ctx, {
       type: 'line',
-      plugins: [projectionLinesPlugin],
-      data: {
-        labels,
-        datasets: [{
-          label:                'Онлайн',
-          data,
-          borderColor:          '#3ba55d',
-          backgroundColor:      grad,
-          borderWidth:          2,
-          pointRadius:          0,
-          pointHoverRadius:     5,
-          pointBackgroundColor: '#3ba55d',
-          fill:                 true,
-          tension:              0,
-          spanGaps:             false,
-        }],
-      },
+      plugins,
+      data: { labels, datasets: [datasetCfg] },
       options: {
         responsive:          true,
         maintainAspectRatio: false,
@@ -409,42 +491,54 @@ document.addEventListener('DOMContentLoaded', () => {
         scales: {
           x: {
             ticks: {
-              color:         '#484848',
+              color:         isClassic ? '#484848' : '#505050',
               font:          { size: 10, family: 'Roboto' },
-              maxTicksLimit: 13,
+              maxTicksLimit: isClassic ? 13 : 10,
               maxRotation:   0,
               autoSkip:      true,
             },
-            grid:   { color: 'rgba(255,255,255,0.03)' },
+            grid:   { color: isClassic ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.04)' },
             border: { color: '#2a2a2a' },
           },
           y: {
-            min:  0,
+            position: isStock ? 'right' : 'left',
+            min:  yMin,
             max:  yMax,
             ticks: {
-              color:    '#484848',
+              color:    isClassic ? '#484848' : '#505050',
               font:     { size: 10, family: 'Roboto' },
               stepSize: stepSz,
             },
-            grid:   { color: 'rgba(255,255,255,0.06)' },
-            border: { color: '#2a2a2a' },
+            grid:   { color: isClassic ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.05)' },
+            border: { color: '#2a2a2a', ...(isStock ? { dash: [3, 3] } : {}) },
           },
         },
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#1a1a1a',
-            borderColor:     '#303030',
-            borderWidth:     1,
-            titleColor:      '#888',
-            bodyColor:       '#f0f0f0',
-            titleFont:       { size: 11 },
-            bodyFont:        { size: 13, weight: '700' },
-            padding:         10,
-            filter:          item => item.parsed.y !== null,
+            backgroundColor:  '#1a1a1a',
+            borderColor:      '#303030',
+            borderWidth:      1,
+            titleColor:       '#888',
+            bodyColor:        '#f0f0f0',
+            titleFont:        { size: 11 },
+            bodyFont:         { size: 13, weight: '700' },
+            padding:          10,
+            displayColors:    false,
+            filter:           item => item.parsed.y !== null,
             callbacks: {
               title: items => items[0].label,
-              label: ctx   => ` ${ctx.parsed.y} игроков`,
+              label: c => {
+                const v    = c.parsed.y;
+                const prev = c.dataset.data[c.dataIndex - 1];
+                if (isStock && prev !== null && prev !== undefined) {
+                  const diff  = v - prev;
+                  const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '—';
+                  const sign  = diff > 0 ? '+' : '';
+                  return ` ${v} игроков  ${arrow} ${sign}${diff}`;
+                }
+                return ` ${v} игроков`;
+              },
             },
           },
         },
@@ -912,12 +1006,46 @@ document.addEventListener('DOMContentLoaded', () => {
     currentTimeElement.textContent = `${d} ${t}`;
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // БЛОК 15 — Переключатель стиля графика
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const styleBtn      = document.getElementById('chart-style-btn');
+  const styleDropdown = document.getElementById('chart-style-dropdown');
+  const styleOptions  = document.querySelectorAll('.chart-style-option');
+
+  function updateStyleActiveState() {
+    styleOptions.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.style === chartStyle);
+    });
+  }
+  updateStyleActiveState();
+
+  styleBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    styleDropdown.classList.toggle('is-open');
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#chart-style-picker')) {
+      styleDropdown.classList.remove('is-open');
+    }
+  });
+
+  styleOptions.forEach(btn => {
+    btn.addEventListener('click', () => {
+      chartStyle = btn.dataset.style;
+      updateStyleActiveState();
+      styleDropdown.classList.remove('is-open');
+      if (currentlyOpenProject) {
+        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+        buildChart(currentlyOpenProject);
+      }
+    });
+  });
+
   fetchData();
   setInterval(fetchData, 5000);
   updateClock();
   setInterval(updateClock, 1000);
 });
-
-
-
-
