@@ -19,16 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const chartPanelTitle      = document.getElementById('chart-panel-title');
   const closeChartBtn        = document.getElementById('close-chart-btn');
   const onlineChartCanvas    = document.getElementById('online-chart');
-  const monitorContainer     = document.querySelector('.monitor-container');
 
-  function updateMonitorClasses() {
-    const rightOpen = detailsPanel.classList.contains('is-open');
-    const leftOpen  = chartPanel.classList.contains('is-open');
-    if (monitorContainer) {
-      monitorContainer.classList.toggle('panel-right-open', rightOpen);
-      monitorContainer.classList.toggle('panel-left-open',  leftOpen);
-    }
-  }
 
   if (closeChartBtn) closeChartBtn.style.display = 'none';
 
@@ -223,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Group data points into candle intervals
-    const groupSize = 2; // each candle = 2 history points
+    const groupSize = 1; // each candle = 1 history point (more visible OHLC variation)
     for (let i = 0; i < sorted.length; i += groupSize) {
       const chunk = sorted.slice(i, i + groupSize);
       const values = chunk.map(([, v]) => v);
@@ -290,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Slot width per candle; body = 75% of slot, gap = 25%
       const slotWidth = chartArea.width / candleData.length;
       const barWidth  = Math.max(3, Math.min(28, slotWidth * 0.75));
-      const wickWidth = Math.max(1, Math.min(2, barWidth * 0.08));
+      const wickWidth = 2;  // fixed 2px wick — always visible
 
       for (let i = 0; i < candleData.length; i++) {
         const candle = candleData[i];
@@ -313,11 +304,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const bodyBottom = Math.max(oY, cY);
         const bodyHeight = Math.max(2, bodyBottom - bodyTop);
 
+        // Ensure wicks are always visually drawn (min 4px from body edge)
+        const wickTopY    = Math.min(hY, bodyTop - 4);
+        const wickBottomY = Math.max(lY, bodyBottom + 4);
+
         // Upper wick: from high to body top
         ctx.beginPath();
         ctx.strokeStyle = wickColor;
         ctx.lineWidth   = wickWidth;
-        ctx.moveTo(x, hY);
+        ctx.moveTo(x, wickTopY);
         ctx.lineTo(x, bodyTop);
         ctx.stroke();
 
@@ -326,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.strokeStyle = wickColor;
         ctx.lineWidth   = wickWidth;
         ctx.moveTo(x, bodyBottom);
-        ctx.lineTo(x, lY);
+        ctx.lineTo(x, wickBottomY);
         ctx.stroke();
 
         // Body
@@ -515,7 +510,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function showChartPanel(projectName) {
     chartPanelTitle.textContent = projectName;
     chartPanel.classList.add('is-open');
-    updateMonitorClasses();
     chartLastLiveValue  = -1;
     chartLastHistoryLen = -1;
     if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
@@ -524,7 +518,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function hideChartPanel() {
     chartPanel.classList.remove('is-open');
-    updateMonitorClasses();
     chartLastLiveValue  = -1;
     chartLastHistoryLen = -1;
     if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
@@ -1117,7 +1110,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     detailsPanel.classList.add('is-open');
     detailsOverlay.classList.add('is-open');
-    updateMonitorClasses();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -1147,7 +1139,6 @@ document.addEventListener('DOMContentLoaded', () => {
     detailsPanel.classList.add('is-open');
     detailsOverlay.classList.add('is-open');
     showChartPanel(projectName);
-    updateMonitorClasses();
   }
 
   function hideDetailsPanel() {
@@ -1156,7 +1147,6 @@ document.addEventListener('DOMContentLoaded', () => {
     detailsPanel.classList.remove('is-open');
     detailsOverlay.classList.remove('is-open');
     hideChartPanel();
-    updateMonitorClasses();
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

@@ -779,32 +779,13 @@ h1 {
 
 /* ── Seamless join: flush panels against monitor ── */
 
-/* Details panel (right): remove border-left, square left corners */
+/* Details panel (right): no left border (shares wall with monitor) */
 .details-panel.is-open .panel-content-wrapper {
   border-left: none;
   border-radius: 0 14px 14px 0;
 }
 
-/* Monitor: right side joins details panel */
-.monitor-container.panel-right-open {
-  border-right: none;
-  border-radius: 14px 0 0 14px;
-}
-
-/* Monitor: left side joins chart panel */
-.monitor-container.panel-left-open {
-  border-left: none;
-  border-radius: 0 14px 14px 0;
-}
-
-/* Monitor: both panels open */
-.monitor-container.panel-right-open.panel-left-open {
-  border-left: none;
-  border-right: none;
-  border-radius: 0;
-}
-
-/* Chart panel (left): remove border-right, square right corners */
+/* Chart panel (left): no right border (shares wall with monitor) */
 .chart-panel.is-open .chart-panel-wrapper {
   border-right: none;
   border-radius: 14px 0 0 14px;
