@@ -202,10 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const sorted = [...history].sort((a, b) => a[0] - b[0]);
     const now = Date.now();
     const candles = [];
-    const INTERVAL = 10 * 60 * 1000; // group every ~10 minutes (2 data points)
 
     if (sorted.length === 0) {
-      // Single live candle
       const timeStr = new Date(now).toLocaleTimeString('ru-RU', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
       });
@@ -213,41 +211,58 @@ document.addEventListener('DOMContentLoaded', () => {
       return candles;
     }
 
-    // Group data points into candle intervals
-    const groupSize = 1; // each candle = 1 history point (more visible OHLC variation)
+    // ── Build OHLC candles from groups of history points ──────────────────
+    // groupSize = 2: each candle covers ~20 minutes (2 × ~10 min points)
+    // Open  = first value in group
+    // Close = last value in group
+    // High  = max of all values in group
+    // Low   = min of all values in group
+    const groupSize = 2;
+
     for (let i = 0; i < sorted.length; i += groupSize) {
-      const chunk = sorted.slice(i, i + groupSize);
+      const chunk  = sorted.slice(i, i + groupSize);
       const values = chunk.map(([, v]) => v);
+
       const o = values[0];
       const c = values[values.length - 1];
       const h = Math.max(...values);
       const l = Math.min(...values);
-      const ts = chunk[0][0];
+
+      const ts    = chunk[0][0];
       const label = new Date(ts).toLocaleTimeString('ru-RU', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
       });
       candles.push({ label, o, h, l, c, isLive: false });
     }
 
-    // Make the last candle "live" — incorporate the current real-time value
+    // ── Live candle ───────────────────────────────────────────────────────
     const lastCandle = candles[candles.length - 1];
-    const lastTs = sorted[sorted.length - 1][0];
+    const lastTs     = sorted[sorted.length - 1][0];
+
     if (now - lastTs > 60_000) {
-      // Add a new live candle
+      // New live candle: opens at previous close
       const timeStr = new Date(now).toLocaleTimeString('ru-RU', {
         hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
       });
-      candles.push({ label: timeStr, o: lastCandle.c, h: Math.max(lastCandle.c, live), l: Math.min(lastCandle.c, live), c: live, isLive: true });
+      const liveOpen = lastCandle.c;
+      candles.push({
+        label:  timeStr,
+        o: liveOpen,
+        h: Math.max(liveOpen, live),
+        l: Math.min(liveOpen, live),
+        c: live,
+        isLive: true,
+      });
     } else {
       // Update last candle with live value
-      lastCandle.c = live;
-      lastCandle.h = Math.max(lastCandle.h, live);
-      lastCandle.l = Math.min(lastCandle.l, live);
+      lastCandle.c      = live;
+      lastCandle.h      = Math.max(lastCandle.h, live);
+      lastCandle.l      = Math.min(lastCandle.l, live);
       lastCandle.isLive = true;
     }
 
-    // Add right padding (empty candles for spacing)
-    const rightPad = Math.max(2, Math.round(candles.length * 0.15));
+    // ── Right padding ─────────────────────────────────────────────────────
+    const rightPad = Math.max(2, Math.round(candles.length * 0.12));
     for (let p = 1; p <= rightPad; p++) {
       const ts = now + p * 10 * 60_000;
       candles.push({
@@ -296,32 +311,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const hY = yScale.getPixelForValue(candle.h);
         const lY = yScale.getPixelForValue(candle.l);
 
-        const bullish   = candle.c >= candle.o;
-        const bodyColor = bullish ? '#26a65b' : '#ed4245';
-        const wickColor = bullish ? 'rgba(38,166,91,0.75)' : 'rgba(237,66,69,0.75)';
+        const bullish   = candle.c >= candle.o;  // green if up or flat, red if down
+        const bodyColor = bullish ? '#2ecc71' : '#e74c3c';
+        const wickColor = bullish ? '#2ecc71' : '#e74c3c';
 
         const bodyTop    = Math.min(oY, cY);
         const bodyBottom = Math.max(oY, cY);
         const bodyHeight = Math.max(2, bodyBottom - bodyTop);
 
-        // Ensure wicks are always visually drawn (min 4px from body edge)
-        const wickTopY    = Math.min(hY, bodyTop - 4);
-        const wickBottomY = Math.max(lY, bodyBottom + 4);
-
-        // Upper wick: from high to body top
+        // Upper wick: from high to body top (min 5px guaranteed)
+        const wTopY = Math.min(hY, bodyTop - 5);
         ctx.beginPath();
         ctx.strokeStyle = wickColor;
         ctx.lineWidth   = wickWidth;
-        ctx.moveTo(x, wickTopY);
+        ctx.moveTo(x, wTopY);
         ctx.lineTo(x, bodyTop);
         ctx.stroke();
 
-        // Lower wick: from body bottom to low
+        // Lower wick: from body bottom to low (min 5px guaranteed)
+        const wBotY = Math.max(lY, bodyBottom + 5);
         ctx.beginPath();
         ctx.strokeStyle = wickColor;
         ctx.lineWidth   = wickWidth;
         ctx.moveTo(x, bodyBottom);
-        ctx.lineTo(x, wickBottomY);
+        ctx.lineTo(x, wBotY);
         ctx.stroke();
 
         // Body
@@ -335,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Subtle border
         ctx.shadowBlur  = 0;
         ctx.shadowColor = 'transparent';
-        ctx.strokeStyle = bullish ? '#1d8045' : '#c43538';
+        ctx.strokeStyle = bullish ? '#27ae60' : '#c0392b';
         ctx.lineWidth   = 0.8;
         ctx.strokeRect(x - barWidth / 2, bodyTop, barWidth, bodyHeight);
       }
