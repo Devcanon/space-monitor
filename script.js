@@ -191,6 +191,143 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // БЛОК 2.5 — Candlestick (Japanese candles) support
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Build OHLC candles from history data.
+  // Each history point = one saved interval. We group consecutive pairs to form candles.
+  // The last candle is "live" — updated in real-time.
+  function buildCandlestickData(history, live) {
+    const sorted = [...history].sort((a, b) => a[0] - b[0]);
+    const now = Date.now();
+    const candles = [];
+    const INTERVAL = 10 * 60 * 1000; // group every ~10 minutes (2 data points)
+
+    if (sorted.length === 0) {
+      // Single live candle
+      const timeStr = new Date(now).toLocaleTimeString('ru-RU', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
+      });
+      candles.push({ label: timeStr, o: live, h: live, l: live, c: live, isLive: true });
+      return candles;
+    }
+
+    // Group data points into candle intervals
+    const groupSize = 2; // each candle = 2 history points
+    for (let i = 0; i < sorted.length; i += groupSize) {
+      const chunk = sorted.slice(i, i + groupSize);
+      const values = chunk.map(([, v]) => v);
+      const o = values[0];
+      const c = values[values.length - 1];
+      const h = Math.max(...values);
+      const l = Math.min(...values);
+      const ts = chunk[0][0];
+      const label = new Date(ts).toLocaleTimeString('ru-RU', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
+      });
+      candles.push({ label, o, h, l, c, isLive: false });
+    }
+
+    // Make the last candle "live" — incorporate the current real-time value
+    const lastCandle = candles[candles.length - 1];
+    const lastTs = sorted[sorted.length - 1][0];
+    if (now - lastTs > 60_000) {
+      // Add a new live candle
+      const timeStr = new Date(now).toLocaleTimeString('ru-RU', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
+      });
+      candles.push({ label: timeStr, o: lastCandle.c, h: Math.max(lastCandle.c, live), l: Math.min(lastCandle.c, live), c: live, isLive: true });
+    } else {
+      // Update last candle with live value
+      lastCandle.c = live;
+      lastCandle.h = Math.max(lastCandle.h, live);
+      lastCandle.l = Math.min(lastCandle.l, live);
+      lastCandle.isLive = true;
+    }
+
+    // Add right padding (empty candles for spacing)
+    const rightPad = Math.max(2, Math.round(candles.length * 0.15));
+    for (let p = 1; p <= rightPad; p++) {
+      const ts = now + p * 10 * 60_000;
+      candles.push({
+        label: new Date(ts).toLocaleTimeString('ru-RU', {
+          hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow',
+        }),
+        o: null, h: null, l: null, c: null, isLive: false,
+      });
+    }
+
+    return candles;
+  }
+
+  // Chart.js plugin to draw candlesticks on a bar chart
+  const candlestickPlugin = {
+    id: 'candlestickRenderer',
+    afterDatasetsDraw(chart) {
+      if (chartStyle !== 'candlestick') return;
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !meta.data.length) return;
+
+      const { ctx, chartArea, scales: { y: yScale } } = chart;
+      const candleData = chart._candleData;
+      if (!candleData) return;
+
+      ctx.save();
+      const barWidth = Math.max(4, Math.min(18, (chartArea.width / candleData.length) * 0.6));
+      const wickWidth = 1.5;
+
+      for (let i = 0; i < candleData.length; i++) {
+        const candle = candleData[i];
+        if (candle.o === null) continue;
+
+        const element = meta.data[i];
+        if (!element) continue;
+        const x = element.x;
+
+        const oY = yScale.getPixelForValue(candle.o);
+        const cY = yScale.getPixelForValue(candle.c);
+        const hY = yScale.getPixelForValue(candle.h);
+        const lY = yScale.getPixelForValue(candle.l);
+
+        const bullish = candle.c >= candle.o;
+        const bodyColor = bullish ? '#3ba55d' : '#ed4245';
+        const wickColor = bullish ? 'rgba(59,165,93,0.7)' : 'rgba(237,66,69,0.7)';
+
+        // Draw wick (high-low line)
+        ctx.beginPath();
+        ctx.strokeStyle = wickColor;
+        ctx.lineWidth = wickWidth;
+        ctx.moveTo(x, hY);
+        ctx.lineTo(x, lY);
+        ctx.stroke();
+
+        // Draw body (open-close rectangle)
+        const bodyTop = Math.min(oY, cY);
+        const bodyHeight = Math.max(Math.abs(oY - cY), 1); // min 1px for doji
+
+        ctx.fillStyle = bodyColor;
+        ctx.fillRect(x - barWidth / 2, bodyTop, barWidth, bodyHeight);
+
+        // Subtle border on body
+        ctx.strokeStyle = bullish ? '#2d8a4a' : '#c43538';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(x - barWidth / 2, bodyTop, barWidth, bodyHeight);
+
+        // Glow on live candle
+        if (candle.isLive) {
+          ctx.shadowColor = bullish ? 'rgba(59,165,93,0.5)' : 'rgba(237,66,69,0.5)';
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = bodyColor;
+          ctx.fillRect(x - barWidth / 2, bodyTop, barWidth, bodyHeight);
+          ctx.shadowBlur = 0;
+          ctx.shadowColor = 'transparent';
+        }
+      }
+      ctx.restore();
+    },
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // БЛОК 3 — Плагин пунктирных проекций на графике
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -417,7 +554,20 @@ document.addEventListener('DOMContentLoaded', () => {
   function buildChart(projectName) {
     const history          = loadHistory(projectName);
     const live             = getLiveValue(projectName);
-    const { labels, data } = buildDayTimeline(history);
+    const isCandlestick    = chartStyle === 'candlestick';
+
+    let labels, data, candleData;
+
+    if (isCandlestick) {
+      candleData = buildCandlestickData(history, live);
+      labels = candleData.map(c => c.label);
+      // Use close values for chart.js data (used for Y axis scaling & tooltip positioning)
+      data = candleData.map(c => c.c);
+    } else {
+      const timeline = buildDayTimeline(history);
+      labels = timeline.labels;
+      data   = timeline.data;
+    }
 
     const isClassic     = chartStyle === 'classic';
     const isStockStep   = chartStyle === 'stock-step';
@@ -427,17 +577,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const nonNullData = data.filter(v => v !== null);
     const maxVal      = nonNullData.length ? Math.max(...nonNullData, 1) : 10;
 
-    // Y-диапазон: классика от 0, биржевой — динамический
     let yMin, yMax, stepSz;
     if (isClassic) {
       yMin   = 0;
       yMax   = Math.ceil(maxVal * 1.3) || 10;
       stepSz = Math.max(1, Math.ceil(maxVal / 5));
     } else {
-      const minVal = nonNullData.length ? Math.min(...nonNullData) : 0;
-      const pad    = Math.max(1, Math.round((maxVal - minVal) * 0.15));
+      // For candlestick, also consider high/low values
+      let allValues = nonNullData;
+      if (isCandlestick && candleData) {
+        allValues = candleData
+          .filter(c => c.o !== null)
+          .flatMap(c => [c.o, c.h, c.l, c.c]);
+      }
+      const maxV   = allValues.length ? Math.max(...allValues) : 10;
+      const minVal = allValues.length ? Math.min(...allValues) : 0;
+      const pad    = Math.max(1, Math.round((maxV - minVal) * 0.15));
       yMin   = Math.max(0, minVal - pad);
-      yMax   = Math.ceil(maxVal + pad) || 10;
+      yMax   = Math.ceil(maxV + pad) || 10;
       stepSz = Math.max(1, Math.ceil((yMax - yMin) / 5));
     }
 
@@ -457,30 +614,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const segColors = buildStockSegments(data);
 
-    const datasetCfg = {
-      label:                'Онлайн',
-      data,
-      borderColor:          '#3ba55d',
-      backgroundColor:      makeGrad(),
-      borderWidth:          isClassic ? 2 : 2.5,
-      pointRadius:          0,
-      pointHoverRadius:     isClassic ? 5 : 0,
-      pointBackgroundColor: '#3ba55d',
-      fill:                 true,
-      tension:              0,
-      spanGaps:             false,
-      ...(isStockStep   ? { stepped: 'before' } : {}),
-      ...(isStock       ? { segment: { borderColor: c => segColors[c.p1DataIndex] || '#3ba55d' } } : {}),
-    };
+    let datasetCfg;
+    if (isCandlestick) {
+      datasetCfg = {
+        label:           'Онлайн',
+        data,
+        borderColor:     'transparent',
+        backgroundColor: 'transparent',
+        borderWidth:     0,
+        pointRadius:     0,
+        pointHoverRadius: 0,
+        fill:            false,
+        spanGaps:        false,
+      };
+    } else {
+      datasetCfg = {
+        label:                'Онлайн',
+        data,
+        borderColor:          '#3ba55d',
+        backgroundColor:      makeGrad(),
+        borderWidth:          isClassic ? 2 : 2.5,
+        pointRadius:          0,
+        pointHoverRadius:     isClassic ? 5 : 0,
+        pointBackgroundColor: '#3ba55d',
+        fill:                 true,
+        tension:              0,
+        spanGaps:             false,
+        ...(isStockStep   ? { stepped: 'before' } : {}),
+        ...(isStock       ? { segment: { borderColor: c => segColors[c.p1DataIndex] || '#3ba55d' } } : {}),
+      };
+    }
 
-    const plugins = isClassic
-      ? [projectionLinesPlugin]
-      : [projectionLinesPlugin, stockCrosshairPlugin];
+    const plugins = [projectionLinesPlugin, stockCrosshairPlugin];
+    if (isCandlestick) plugins.push(candlestickPlugin);
 
     if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 
     chartInstance = new Chart(ctx, {
-      type: 'line',
+      type: isCandlestick ? 'bar' : 'line',
       plugins,
       data: { labels, datasets: [datasetCfg] },
       options: {
@@ -491,26 +662,26 @@ document.addEventListener('DOMContentLoaded', () => {
         scales: {
           x: {
             ticks: {
-              color:         isClassic ? '#484848' : '#505050',
+              color:         isCandlestick ? '#505050' : (isClassic ? '#484848' : '#505050'),
               font:          { size: 10, family: 'Roboto' },
-              maxTicksLimit: isClassic ? 13 : 10,
+              maxTicksLimit: isCandlestick ? 10 : (isClassic ? 13 : 10),
               maxRotation:   0,
               autoSkip:      true,
             },
-            grid:   { color: isClassic ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.04)' },
+            grid:   { color: isCandlestick ? 'rgba(255,255,255,0.04)' : (isClassic ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.04)') },
             border: { color: '#2a2a2a' },
           },
           y: {
-            position: isStock ? 'right' : 'left',
+            position: (isStock || isCandlestick) ? 'right' : 'left',
             min:  yMin,
             max:  yMax,
             ticks: {
-              color:    isClassic ? '#484848' : '#505050',
+              color:    (isStock || isCandlestick) ? '#505050' : '#484848',
               font:     { size: 10, family: 'Roboto' },
               stepSize: stepSz,
             },
-            grid:   { color: isClassic ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.05)' },
-            border: { color: '#2a2a2a', ...(isStock ? { dash: [3, 3] } : {}) },
+            grid:   { color: isCandlestick ? 'rgba(255,255,255,0.05)' : (isClassic ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.05)') },
+            border: { color: '#2a2a2a', ...((isStock || isCandlestick) ? { dash: [3, 3] } : {}) },
           },
         },
         plugins: {
@@ -529,6 +700,18 @@ document.addEventListener('DOMContentLoaded', () => {
             callbacks: {
               title: items => items[0].label,
               label: c => {
+                const idx = c.dataIndex;
+                if (isCandlestick && candleData && candleData[idx] && candleData[idx].o !== null) {
+                  const cd = candleData[idx];
+                  const diff = cd.c - cd.o;
+                  const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '—';
+                  const sign = diff > 0 ? '+' : '';
+                  return [
+                    ` O: ${cd.o}  H: ${cd.h}`,
+                    ` L: ${cd.l}  C: ${cd.c}`,
+                    ` ${arrow} ${sign}${diff}${cd.isLive ? '  (live)' : ''}`,
+                  ];
+                }
                 const v    = c.parsed.y;
                 const prev = c.dataset.data[c.dataIndex - 1];
                 if (isStock && prev !== null && prev !== undefined) {
@@ -544,6 +727,9 @@ document.addEventListener('DOMContentLoaded', () => {
         },
       },
     });
+
+    // Store candle data on chart instance for plugin to access
+    if (isCandlestick) chartInstance._candleData = candleData;
 
     updateChartStats(history, live);
   }
@@ -1003,7 +1189,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const t   = now.toLocaleTimeString('ru-RU', {
       hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Moscow',
     });
-    currentTimeElement.textContent = `${d} ${t}`;
+    currentTimeElement.innerHTML =
+      `<i class="fa-regular fa-clock clock-icon"></i>` +
+      `<span class="clock-time">${t}</span>` +
+      `<span class="clock-sep"></span>` +
+      `<span class="clock-date">${d}</span>`;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

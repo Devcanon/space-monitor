@@ -101,13 +101,43 @@ h1 {
 
 /* ── Clock ── */
 .current-time {
-  text-align: center;
-  font-size: 1.45em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 1.3em;
   font-weight: 700;
   color: #fff;
   padding: 14px 0;
   border-bottom: 1px solid var(--border-color);
   letter-spacing: 0.06em;
+  font-family: 'Roboto', monospace;
+}
+
+.clock-icon {
+  color: var(--accent-online);
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
+.clock-time {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 8px rgba(59, 165, 93, 0.3);
+}
+
+.clock-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+
+.clock-date {
+  color: #5a5a5a;
+  font-size: 0.78em;
+  font-weight: 400;
+  letter-spacing: 0.08em;
 }
 
 /* ── Stats bar ── */
@@ -745,6 +775,36 @@ h1 {
   letter-spacing: 0.06em;
   flex-shrink: 0;
   padding-bottom: 2px;
+}
+
+/* ── Seamless join: table flush against chart right wall ── */
+.details-panel.is-open + .dummy-never,
+.details-panel.is-open {
+  margin-left: 0;
+}
+
+.details-panel.is-open .panel-content-wrapper {
+  border-left: none;
+  border-radius: 0 14px 14px 0;
+}
+
+/* When chart-panel is open, remove monitor-container left border-radius for seamless join */
+.chart-panel.is-open ~ .monitor-container {
+  border-radius: 0 14px 14px 0;
+  border-left: none;
+}
+
+/* When details-panel is open, remove monitor-container right border-radius for seamless join */
+.monitor-container:has(~ .details-panel.is-open) {
+  border-radius: 14px 0 0 14px;
+  border-right: none;
+}
+
+/* When both panels are open, monitor has no border-radius on sides */
+.chart-panel.is-open ~ .monitor-container:has(~ .details-panel.is-open) {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
 }
 
 /* ════════════════════════════════════════════
