@@ -667,7 +667,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pointHoverRadius:     isClassic ? 5 : 0,
         pointBackgroundColor: '#3ba55d',
         fill:                 true,
-        tension:              0,
+        tension:              0.3,
         spanGaps:             false,
         ...(isStockStep   ? { stepped: 'before' } : {}),
         ...(isStock       ? { segment: { borderColor: c => segColors[c.p1DataIndex] || '#3ba55d' } } : {}),
