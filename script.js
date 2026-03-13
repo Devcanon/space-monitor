@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const API_URL           = 'https://hub.spacestation14.com/api/servers';
   const MINECRAFT_API_URL = 'https://api.mcstatus.io/v2/status/java/corvaxcraft.ru';
-  const RESERVE_API_URL   = 'https://lena.reserve-station.space/v1/misc/server-data';
   const HISTORY_URL       = 'data/history.json';
 
   // ─── DOM refs ─────────────────────────────────────────────────────────────
@@ -34,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentlyOpenProject   = null;
   let currentlyOpenHubServer = null;
   let minecraftServerData    = null;
-  let reserveServerData      = null;
   let allServersRaw          = [];
   let processedProjectState  = {};
   let chartInstance          = null;
@@ -520,8 +518,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (projectName === 'Корвакс' && minecraftServerData?.online) {
       v += minecraftServerData.players.online;
     }
-    if (projectName === 'Резерв' && reserveServerData?.players != null) {
-      v = reserveServerData.players;
+    if (projectName === 'Резерв') {
+      // Reserve data is stored in history.json by fetch-servers.js (no CORS issue)
+      const reserveHistory = loadHistory('Резерв');
+      if (reserveHistory.length > 0) {
+        // Use most recent history point as live value if no processedProjectState
+        const latest = reserveHistory[reserveHistory.length - 1];
+        if (!processedProjectState['Резерв']) v = latest[1];
+      }
     }
     return v;
   }
@@ -781,14 +785,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch { minecraftServerData = null; }
   }
 
-  async function fetchReserveStatus() {
-    try {
-      const res = await fetch(RESERVE_API_URL);
-      if (!res.ok) throw new Error();
-      reserveServerData = await res.json();
-    } catch { reserveServerData = null; }
-  }
-
   async function fetchData() {
     try {
       await Promise.all([
@@ -796,7 +792,6 @@ document.addEventListener('DOMContentLoaded', () => {
           .then(res => { if (!res.ok) throw new Error(`${res.status}`); return res.json(); })
           .then(data => processData(data)),
         fetchMinecraftStatus(),
-        fetchReserveStatus(),
         loadSharedHistory(),
       ]);
       renderStats();
@@ -881,24 +876,20 @@ document.addEventListener('DOMContentLoaded', () => {
       pendingServerState['Corvax Craft'] = mc;
     }
 
-    if (reserveServerData?.players != null) {
-      const rv  = reserveServerData.players;
-      const srv = {
-        name:             reserveServerData.name || 'Reserve Station',
-        players:          rv,
-        soft_max_players: reserveServerData.soft_max_players,
-        map:              reserveServerData.map,
-        preset:           reserveServerData.preset,
-        tags:             reserveServerData.tags || [],
-        round_id:         reserveServerData.round_id,
-        run_level:        reserveServerData.run_level,
-        round_start_time: reserveServerData.round_start_time,
-        panic_bunker:     reserveServerData.panic_bunker,
-        isReserve:        true,
-      };
-      cur['Резерв']          = rv;
-      groupedServers['Резерв'] = [srv];
-      pendingServerState[srv.name] = rv;
+    // Reserve is stored in history.json — pick latest value
+    {
+      const reserveHistory = loadHistory('Резерв');
+      if (reserveHistory.length > 0) {
+        const latest = reserveHistory[reserveHistory.length - 1];
+        const rv = latest[1];
+        cur['Резерв'] = rv;
+        groupedServers['Резерв'] = [{
+          name:    'Reserve Station',
+          players: rv,
+          isReserve: true,
+        }];
+        pendingServerState['Reserve Station'] = rv;
+      }
     }
 
     const sorted = Object.entries(cur).sort(([, a], [, b]) => b - a);

@@ -1,7 +1,8 @@
 const fs   = require('fs');
 const path = require('path');
 
-const API_URL    = 'https://hub.spacestation14.com/api/servers';
+const API_URL        = 'https://hub.spacestation14.com/api/servers';
+const RESERVE_API_URL = 'https://lena.reserve-station.space/v1/misc/server-data';
 const DATA_FILE  = path.join(__dirname, '../data/history.json');
 const MAX_POINTS = 288;  // ~24 часа при шаге ~5 мин
 
@@ -60,6 +61,7 @@ async function main() {
   // ── суммируем онлайн по проектам ──
   const totals = {};
   for (const name in SERVER_GROUPS) totals[name] = 0;
+  totals['Резерв'] = 0;
 
   for (const server of servers) {
     if (!server?.statusData?.name || typeof server.statusData.players !== 'number') continue;
@@ -71,6 +73,20 @@ async function main() {
         break;
       }
     }
+  }
+
+  // ── запрос к Reserve API ──
+  try {
+    const resReserve = await fetchWithTimeout(RESERVE_API_URL, 8000);
+    if (resReserve.ok) {
+      const reserveData = await resReserve.json();
+      if (typeof reserveData.players === 'number') {
+        totals['Резерв'] = reserveData.players;
+      }
+    }
+  } catch (e) {
+    console.warn('Reserve API fetch failed:', e.message);
+    totals['Резерв'] = 0;
   }
 
   // ── добавляем новую точку ──
