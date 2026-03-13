@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const API_URL           = 'https://hub.spacestation14.com/api/servers';
   const MINECRAFT_API_URL = 'https://api.mcstatus.io/v2/status/java/corvaxcraft.ru';
+  const RESERVE_API_URL   = 'https://lena.reserve-station.space/v1/misc/server-data';
   const HISTORY_URL       = 'data/history.json';
 
   // ─── DOM refs ─────────────────────────────────────────────────────────────
@@ -33,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentlyOpenProject   = null;
   let currentlyOpenHubServer = null;
   let minecraftServerData    = null;
+  let reserveServerData      = null;
   let allServersRaw          = [];
   let processedProjectState  = {};
   let chartInstance          = null;
@@ -53,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'СС220':             ['SS220'],
     'Время Приключений': ['Время'],
     'Сталкер':           ['Stalker'],
+    'Резерв':            ['__reserve__'],  // fetched separately
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -517,6 +520,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (projectName === 'Корвакс' && minecraftServerData?.online) {
       v += minecraftServerData.players.online;
     }
+    if (projectName === 'Резерв' && reserveServerData?.players != null) {
+      v = reserveServerData.players;
+    }
     return v;
   }
 
@@ -775,6 +781,14 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch { minecraftServerData = null; }
   }
 
+  async function fetchReserveStatus() {
+    try {
+      const res = await fetch(RESERVE_API_URL);
+      if (!res.ok) throw new Error();
+      reserveServerData = await res.json();
+    } catch { reserveServerData = null; }
+  }
+
   async function fetchData() {
     try {
       await Promise.all([
@@ -782,6 +796,7 @@ document.addEventListener('DOMContentLoaded', () => {
           .then(res => { if (!res.ok) throw new Error(`${res.status}`); return res.json(); })
           .then(data => processData(data)),
         fetchMinecraftStatus(),
+        fetchReserveStatus(),
         loadSharedHistory(),
       ]);
       renderStats();
@@ -864,6 +879,26 @@ document.addEventListener('DOMContentLoaded', () => {
       groupedServers['Корвакс'] = groupedServers['Корвакс'].filter(s => s.name !== 'Corvax Craft');
       groupedServers['Корвакс'].push({ name: 'Corvax Craft', players: mc, isMinecraft: true });
       pendingServerState['Corvax Craft'] = mc;
+    }
+
+    if (reserveServerData?.players != null) {
+      const rv  = reserveServerData.players;
+      const srv = {
+        name:             reserveServerData.name || 'Reserve Station',
+        players:          rv,
+        soft_max_players: reserveServerData.soft_max_players,
+        map:              reserveServerData.map,
+        preset:           reserveServerData.preset,
+        tags:             reserveServerData.tags || [],
+        round_id:         reserveServerData.round_id,
+        run_level:        reserveServerData.run_level,
+        round_start_time: reserveServerData.round_start_time,
+        panic_bunker:     reserveServerData.panic_bunker,
+        isReserve:        true,
+      };
+      cur['Резерв']          = rv;
+      groupedServers['Резерв'] = [srv];
+      pendingServerState[srv.name] = rv;
     }
 
     const sorted = Object.entries(cur).sort(([, a], [, b]) => b - a);
@@ -986,12 +1021,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const prefix = server.isMinecraft
         ? '<i class="fa-solid fa-cube" style="color:#cd7f32;margin-right:4px"></i>' : '';
 
+      const maxPlr = server.soft_max_players ? '/' + server.soft_max_players : '';
       div.innerHTML = `
         <div class="server-name-container">${prefix}
           <span class="server-name-text">${server.name}</span>
         </div>
         <div class="player-count-wrapper">
-          <div class="player-count">${online} ${icon}</div>
+          <div class="player-count">${online}${maxPlr} ${icon}</div>
         </div>`;
 
       applyAnim(div, online, previousServerState[server.name]);
@@ -1053,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
         <div class="player-count-wrapper">
-          <div class="player-count">${online} ${icon}</div>
+          <div class="player-count">${online}${server.soft_max_players ? '/' + server.soft_max_players : ''} ${icon}</div>
         </div>`;
 
       applyAnim(div, online, previousServerState[server.name]);
