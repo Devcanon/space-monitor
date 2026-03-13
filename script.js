@@ -1012,13 +1012,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const prefix = server.isMinecraft
         ? '<i class="fa-solid fa-cube" style="color:#cd7f32;margin-right:4px"></i>' : '';
 
-      const maxPlr = server.soft_max_players ? '/' + server.soft_max_players : '';
       div.innerHTML = `
         <div class="server-name-container">${prefix}
           <span class="server-name-text">${server.name}</span>
         </div>
         <div class="player-count-wrapper">
-          <div class="player-count">${online}${maxPlr} ${icon}</div>
+          <div class="player-count">${online} ${icon}</div>
         </div>`;
 
       applyAnim(div, online, previousServerState[server.name]);
@@ -1080,7 +1079,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
         <div class="player-count-wrapper">
-          <div class="player-count">${online}${server.soft_max_players ? '/' + server.soft_max_players : ''} ${icon}</div>
+          <div class="player-count">${online} ${icon}</div>
         </div>`;
 
       applyAnim(div, online, previousServerState[server.name]);
