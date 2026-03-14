@@ -1,163 +1,23 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Мониторинг им. Деканона</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <link rel="stylesheet" href="style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <title> </title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-  <div class="main-wrapper">
 
-    <!-- ═══ ЛЕВАЯ ПАНЕЛЬ — График онлайна ═══ -->
-    <div id="chart-panel" class="chart-panel">
-      <div class="chart-panel-wrapper">
+  <div id="cursor-dot"></div>
+  <div id="cursor-ring"></div>
 
-        <div class="chart-panel-header">
-          <div class="chart-header-left">
-            <i class="fa-solid fa-chart-line chart-header-icon"></i>
-            <h2 id="chart-panel-title">График онлайна</h2>
-          </div>
-          <div class="chart-header-right">
-            <div class="chart-style-picker" id="chart-style-picker">
-              <button class="chart-style-btn" id="chart-style-btn">
-                <i class="fa-solid fa-palette"></i> Стиль
-              </button>
-              <div class="chart-style-dropdown" id="chart-style-dropdown">
-                <button class="chart-style-option" data-style="classic">
-                  <span class="cso-icon">〰</span>
-                  <span class="cso-label">Классика</span>
-                  <span class="cso-desc">Плавная линия</span>
-                </button>
-                <button class="chart-style-option" data-style="stock-step">
-                  <span class="cso-icon">⌐</span>
-                  <span class="cso-label">Биржевой</span>
-                  <span class="cso-desc">Ступенчатый</span>
-                </button>
-                <button class="chart-style-option" data-style="stock-smooth">
-                  <span class="cso-icon">📈</span>
-                  <span class="cso-label">Биржевой Smooth</span>
-                  <span class="cso-desc">Без ступеней</span>
-                </button>
-                <button class="chart-style-option" data-style="candlestick">
-                  <span class="cso-icon">🕯</span>
-                  <span class="cso-label">Свечи</span>
-                  <span class="cso-desc">Японские свечи</span>
-                </button>
-              </div>
-            </div>
-            <button id="close-chart-btn" class="close-panel-btn">&times;</button>
-          </div>
-        </div>
+  <canvas id="bg-canvas"></canvas>
+  <canvas id="matrix-canvas"></canvas>
 
-        <div class="chart-panel-body">
+  <div id="glitch-overlay"></div>
+  <div id="scanlines"></div>
 
-          <!-- Мини-статистика за сутки -->
-          <div class="chart-day-stats">
-            <div class="chart-day-stat">
-              <span class="chart-day-val" id="chart-stat-current">—</span>
-              <span class="chart-day-lbl">сейчас</span>
-            </div>
-            <div class="chart-day-sep"></div>
-            <div class="chart-day-stat">
-              <span class="chart-day-val col-green" id="chart-stat-max">—</span>
-              <span class="chart-day-lbl">макс. сегодня</span>
-            </div>
-            <div class="chart-day-sep"></div>
-            <div class="chart-day-stat">
-              <span class="chart-day-val" id="chart-stat-avg">—</span>
-              <span class="chart-day-lbl">среднее</span>
-            </div>
-          </div>
-
-          <!-- Холст графика -->
-          <div class="chart-canvas-wrap">
-            <canvas id="online-chart"></canvas>
-          </div>
-
-          <!-- Подпись даты -->
-          <div class="chart-date-label" id="chart-date-label"></div>
-
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══ ЦЕНТР — Основной монитор ═══ -->
-    <div class="monitor-container">
-
-      <div class="header-block">
-        <h1>Онлайны проектов</h1>
-      </div>
-
-      <div class="mode-tabs">
-        <button id="tab-projects" class="mode-tab active">
-          <i class="fa-solid fa-layer-group"></i> Проекты
-        </button>
-        <button id="tab-hub" class="mode-tab">
-          <i class="fa-solid fa-globe"></i> Весь хаб
-        </button>
-      </div>
-
-      <div id="current-time" class="current-time"></div>
-
-      <div id="stats-bar" class="stats-bar">
-        <div class="stat-item">
-          <span class="stat-val" id="stat-total">—</span>
-          <span class="stat-lbl">игроков</span>
-        </div>
-        <div class="stat-sep"></div>
-        <div class="stat-item">
-          <span class="stat-val col-green" id="stat-active">—</span>
-          <span class="stat-lbl">онлайн</span>
-        </div>
-        <div class="stat-sep"></div>
-        <div class="stat-item">
-          <span class="stat-val col-red" id="stat-inactive">—</span>
-          <span class="stat-lbl">офлайн</span>
-        </div>
-        <div class="stat-sep"></div>
-        <div class="stat-item">
-          <span class="stat-val col-pink" id="stat-18plus">—</span>
-          <span class="stat-lbl">серверов 18+</span>
-        </div>
-      </div>
-
-      <div id="servers-list">
-        <p class="loading-text">Загрузка данных с API...</p>
-      </div>
-
-      <div class="footer">
-        <p>Данные обновляются каждые 5 секунд</p>
-      </div>
-    </div>
-
-    <!-- ═══ ПРАВАЯ ПАНЕЛЬ — Серверы проекта ═══ -->
-    <div id="details-panel" class="details-panel">
-      <div class="panel-content-wrapper">
-        <div class="panel-header">
-          <h2 id="panel-title">Детали проекта</h2>
-          <button id="close-panel-btn" class="close-panel-btn">&times;</button>
-        </div>
-        <div id="details-server-list" class="panel-body"></div>
-      </div>
-    </div>
-
-  </div>
-
-  <div id="details-overlay" class="details-overlay"></div>
-
-  <!-- Chart.js CDN — обязательно ДО script.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <script src="script.js"></script>
 </body>
-
 </html>
