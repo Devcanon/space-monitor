@@ -3,21 +3,186 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <title> </title>
+  <title>Сайт переехал</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <div id="cursor-dot"></div>
-  <div id="cursor-ring"></div>
+  <!-- Stars canvas -->
+  <canvas id="stars-canvas"></canvas>
 
-  <canvas id="bg-canvas"></canvas>
-  <canvas id="matrix-canvas"></canvas>
+  <!-- Top-right controls -->
+  <div class="controls">
+    <button class="stars-toggle" id="starsToggle" title="Звёзды" aria-label="Переключить звёзды">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 1L9.5 5.5H14L10.5 8.5L11.5 13L8 10.5L4.5 13L5.5 8.5L2 5.5H6.5L8 1Z"
+              fill="currentColor"/>
+      </svg>
+    </button>
+    <button class="theme-toggle" id="themeToggle" title="Тема" aria-label="Переключить тему">
+      <!-- Moon icon (shown in dark mode) -->
+      <svg class="icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M14 10.5A6.5 6.5 0 0 1 5.5 2a6.5 6.5 0 1 0 8.5 8.5z" fill="currentColor"/>
+      </svg>
+      <!-- Sun icon (shown in light mode, hidden by default) -->
+      <svg class="icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none">
+        <circle cx="8" cy="8" r="3" fill="currentColor"/>
+        <line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="8" y1="13" x2="8" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="1" y1="8" x2="3" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="13" y1="8" x2="15" y2="8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="3.05" y1="3.05" x2="4.46" y2="4.46" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="11.54" y1="11.54" x2="12.95" y2="12.95" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="12.95" y1="3.05" x2="11.54" y2="4.46" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="4.46" y1="11.54" x2="3.05" y2="12.95" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
 
-  <div id="glitch-overlay"></div>
-  <div id="scanlines"></div>
+  <!-- Main content -->
+  <div class="page-wrapper">
+    <div class="card-levitate">
+      <div class="card-window">
 
-  <script src="script.js"></script>
+        <div class="card-content">
+
+          <!-- Icon -->
+          <div class="icon-wrapper" aria-hidden="true">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 16H26M26 16L19 9M26 16L19 23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <!-- Heading -->
+          <h1 class="card-heading">Этот сайт переехал</h1>
+
+          <!-- Notice block -->
+          <div class="notice-block">
+            <span class="notice-label">уведомление</span>
+            <p class="notice-text">
+              Страница, которую вы ищете, теперь находится по новому адресу.
+              Пожалуйста, обновите закладки — старая ссылка больше не поддерживается.
+            </p>
+          </div>
+
+          <!-- Redirect button -->
+          <a
+            href="https://decanon.ru/space-monitor"
+            class="redirect-btn"
+            rel="noopener noreferrer"
+          >
+            <span class="redirect-btn-icon" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7.5 1.5C4.186 1.5 1.5 4.186 1.5 7.5S4.186 13.5 7.5 13.5 13.5 10.814 13.5 7.5 10.814 1.5 7.5 1.5zm0 1a5 5 0 1 1 0 10A5 5 0 0 1 7.5 2.5zm.354 2.646a.5.5 0 0 0-.708.708L9.293 7.5H4.5a.5.5 0 0 0 0 1h4.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3a.5.5 0 0 0 0-.708l-3-3z" fill="currentColor"/>
+              </svg>
+            </span>
+            <span class="redirect-btn-label">Перейти на новый сайт</span>
+            <span class="redirect-btn-arrow" aria-hidden="true">↗</span>
+          </a>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="card-footer">
+          <span class="card-footer-text">decanon.ru/space-monitor</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ── Theme toggle ── */
+    const root        = document.documentElement;
+    const themeBtn    = document.getElementById('themeToggle');
+    const iconMoon    = themeBtn.querySelector('.icon-moon');
+    const iconSun     = themeBtn.querySelector('.icon-sun');
+
+    const saved = localStorage.getItem('theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    applyTheme(saved);
+
+    themeBtn.addEventListener('click', () => {
+      applyTheme(root.dataset.theme === 'dark' ? 'light' : 'dark');
+    });
+
+    function applyTheme(t) {
+      root.dataset.theme = t;
+      localStorage.setItem('theme', t);
+      iconMoon.style.display = t === 'dark'  ? '' : 'none';
+      iconSun.style.display  = t === 'light' ? '' : 'none';
+    }
+
+    /* ── Stars canvas ── */
+    const canvas    = document.getElementById('stars-canvas');
+    const starsBtn  = document.getElementById('starsToggle');
+    const ctx       = canvas.getContext('2d');
+    let starsActive = false;
+    let animId      = null;
+
+    const STAR_COUNT = 260;
+    let stars = [];
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function initStars() {
+      stars = Array.from({ length: STAR_COUNT }, () => ({
+        x:    Math.random() * canvas.width,
+        y:    Math.random() * canvas.height,
+        r:    Math.random() * 1.4 + 0.2,
+        vx:   (Math.random() - 0.5) * 0.12,
+        vy:   (Math.random() - 0.5) * 0.12,
+        a:    Math.random(),
+        da:   (Math.random() * 0.004 + 0.001) * (Math.random() < 0.5 ? 1 : -1),
+      }));
+    }
+
+    function drawStars() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const s of stars) {
+        s.x  = (s.x + s.vx + canvas.width)  % canvas.width;
+        s.y  = (s.y + s.vy + canvas.height) % canvas.height;
+        s.a += s.da;
+        if (s.a > 1 || s.a < 0) s.da *= -1;
+
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${s.a.toFixed(2)})`;
+        ctx.fill();
+      }
+      animId = requestAnimationFrame(drawStars);
+    }
+
+    function enableStars() {
+      resize();
+      initStars();
+      canvas.classList.add('active');
+      document.body.classList.add('stars-active');
+      starsBtn.classList.add('active');
+      drawStars();
+    }
+
+    function disableStars() {
+      canvas.classList.remove('active');
+      document.body.classList.remove('stars-active');
+      starsBtn.classList.remove('active');
+      if (animId) { cancelAnimationFrame(animId); animId = null; }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    starsBtn.addEventListener('click', () => {
+      starsActive = !starsActive;
+      starsActive ? enableStars() : disableStars();
+    });
+
+    window.addEventListener('resize', () => { if (starsActive) { resize(); initStars(); } });
+  </script>
+
 </body>
 </html>
